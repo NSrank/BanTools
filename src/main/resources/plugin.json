@@ -1,0 +1,9 @@
+{
+  "id": "bantools",
+  "name": "BanTools",
+  "version": "1.0",
+  "description": "Advanced banning plugin for Velocity",
+  "main": "org.plugins.bantools.BanToolsPlugin",
+  "authors": ["NSrank & Qwen2.5-Max"],
+  "dependencies": []
+}
