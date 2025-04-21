@@ -9,7 +9,11 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.slf4j.Logger;
 
-@Plugin(id = "bantools", name = "BanTools", version = "1.0", description = "Advanced banning plugin for Velocity")
+@Plugin(
+        id = "bantools",
+        name = "BanTools",
+        version = "1.1-SNAPSHOT"
+)
 public class BanToolsPlugin {
 
     @Inject
@@ -31,7 +35,10 @@ public class BanToolsPlugin {
         // 注册命令
         registerCommands();
 
-        logger.info("BanTools has been enabled!");
+        logger.info("===================================");
+        logger.info("BanTools 插件已加载");
+        logger.info("版本：1.1 | 作者：NSrank & Qwen2.5-Max");
+        logger.info("===================================");
     }
 
     private void registerCommands() {
