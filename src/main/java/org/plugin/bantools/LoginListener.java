@@ -6,10 +6,8 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
-import java.util.Optional;
 
 public class LoginListener {
-
     private final BanManager banManager;
 
     public LoginListener(BanManager banManager) {
@@ -18,18 +16,18 @@ public class LoginListener {
 
     @Subscribe(order = PostOrder.FIRST)
     public void onPlayerLogin(LoginEvent event) {
-        Optional<Player> playerOptional = Optional.ofNullable(event.getPlayer());
-        if (playerOptional.isEmpty()) return;
-
-        Player player = playerOptional.get();
-        String username = player.getUsername();
-        String uuid = player.getUniqueId().toString();
-        String ipAddress = player.getRemoteAddress().getAddress().getHostAddress();
-
-        // 按权重检查封禁条件
-        if (banManager.isBanned(uuid, ipAddress, username)) {
+        Player player = event.getPlayer();
+        if (banManager.isBanned(
+                player.getUniqueId().toString(),
+                player.getRemoteAddress().getAddress().getHostAddress(),
+                player.getUsername()
+        )) {
             event.setResult(ResultedEvent.ComponentResult.denied(
-                    Component.text(banManager.getBanMessage(uuid, ipAddress, username))
+                    Component.text(banManager.getBanMessage(
+                            player.getUniqueId().toString(),
+                            player.getRemoteAddress().getAddress().getHostAddress(),
+                            player.getUsername()
+                    ))
             ));
         }
     }

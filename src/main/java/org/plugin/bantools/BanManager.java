@@ -1,127 +1,125 @@
 package org.plugin.bantools;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigValueFactory;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import net.kyori.adventure.text.Component;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class BanManager {
-
     private final ProxyServer server;
     private final Logger logger;
+    private final ConfigManager configManager;
+    private final Map<String, BanEntry> banEntries = new HashMap<>();
 
-    private final Set<String> bannedUuids = new HashSet<>();
-    private final Set<String> bannedIps = new HashSet<>();
-    private final Set<String> bannedUsernames = new HashSet<>();
-
-    private File configFile;
-
-    public BanManager(ProxyServer server, Logger logger) {
+    public BanManager(ProxyServer server, Logger logger, ConfigManager configManager) {
         this.server = server;
         this.logger = logger;
-        loadConfig();
+        this.configManager = configManager;
+        loadBans();
     }
 
-    public void loadConfig() {
-        try {
-            // 配置文件路径
-            configFile = new File("plugins/BanTools/config.conf");
-
-            // 如果配置文件不存在，则创建默认配置
-            if (!configFile.exists()) {
-                createDefaultConfig(configFile);
+    public void loadBans() {
+        banEntries.clear();
+        configManager.getBans().forEach((key, entry) -> {
+            if (entry.getState() && !isExpired(entry)) {
+                banEntries.put(key, entry);
             }
-
-            // 加载配置文件
-            Config config = ConfigFactory.parseFile(configFile);
-
-            // 清空旧的封禁列表
-            bannedUuids.clear();
-            bannedIps.clear();
-            bannedUsernames.clear();
-
-            // 读取新的封禁列表
-            bannedUuids.addAll(config.getStringList("banned.uuids"));
-            bannedIps.addAll(config.getStringList("banned.ips"));
-            bannedUsernames.addAll(config.getStringList("banned.usernames"));
-
-            logger.info("Loaded " + bannedUuids.size() + " UUIDs, " + bannedIps.size() + " IPs, and " +
-                    bannedUsernames.size() + " usernames from config");
-        } catch (Exception e) {
-            logger.error("Failed to load configuration file", e);
-        }
+        });
+        logger.info("加载了 " + banEntries.size() + " 个有效封禁记录");
     }
 
-    private void createDefaultConfig(File configFile) {
-        try {
-            // 创建默认配置文件目录
-            configFile.getParentFile().mkdirs();
-
-            // 写入默认配置内容
-            String defaultConfig = "# 默认配置文件\n" +
-                    "banned {\n" +
-                    "    uuids = []\n" +
-                    "    ips = []\n" +
-                    "    usernames = []\n" +
-                    "}\n";
-            Files.write(configFile.toPath(), defaultConfig.getBytes());
-
-            logger.info("Created default configuration file at " + configFile.getAbsolutePath());
-        } catch (Exception e) {
-            logger.error("Failed to create default configuration file", e);
-        }
+    public boolean isBanned(String uuid, String ip, String username) {
+        return banEntries.values().stream()
+                .filter(entry -> !isExpired(entry))
+                .anyMatch(entry ->
+                        entry.getUuid().equals(uuid) ||
+                                entry.getIp().equals(ip) ||
+                                entry.getName().equalsIgnoreCase(username)
+                );
     }
 
-    public boolean isBanned(String uuid, String ipAddress, String username) {
-        return bannedUuids.contains(uuid)
-                || bannedIps.contains(ipAddress)
-                || bannedUsernames.contains(username);
-    }
+    public String getBanMessage(String uuid, String ip, String username) {
+        BanEntry entry = findBanEntry(uuid, ip, username);
+        if (entry == null) return "";
 
-    public String getBanMessage(String uuid, String ipAddress, String username) {
-        if (bannedUuids.contains(uuid)) {
-            return "You are banned by UUID.";
-        } else if (bannedIps.contains(ipAddress)) {
-            return "You are banned by IP.";
+        String reason = entry.getReason();
+        if (entry.isPermanent()) {
+            return "§c你已被永久封禁！\n原因：" + reason;
         } else {
-            return "You are banned by username.";
+            return String.format("§c你已被封禁至 %s\n原因：%s",
+                    entry.getEndTimeFormatted(),
+                    reason);
         }
     }
 
-    public void addBannedUuid(String uuid) {
-        bannedUuids.add(uuid);
-        updateConfig("banned.uuids", bannedUuids);
-    }
+    public void banPlayer(String target, String reason, String duration) {
+        Player player = server.getPlayer(target).orElse(null);
+        BanEntry entry = new BanEntry();
 
-    public void addBannedIp(String ip) {
-        bannedIps.add(ip);
-        updateConfig("banned.ips", bannedIps);
-    }
+        entry.setName(target);
+        entry.setUuid(player != null ? player.getUniqueId().toString() : "unknown");
+        entry.setIp(player != null ? player.getRemoteAddress().getAddress().getHostAddress() : "unknown");
+        entry.setReason(reason.isEmpty() ? configManager.getDefaultBanReason() : reason);
 
-    public void addBannedUsername(String username) {
-        bannedUsernames.add(username);
-        updateConfig("banned.usernames", bannedUsernames);
-    }
-
-    private void updateConfig(String key, Set<String> values) {
-        try {
-            // 读取现有配置
-            Config config = ConfigFactory.parseFile(configFile);
-
-            // 更新指定键的值
-            Config updatedConfig = config.withValue(key, ConfigValueFactory.fromIterable(values));
-
-            // 写回文件
-            Files.write(configFile.toPath(), updatedConfig.root().render().getBytes());
-        } catch (Exception e) {
-            logger.error("Failed to update configuration file", e);
+        // 处理封禁时间（默认永久）
+        if (duration == null || duration.isEmpty() || duration.equalsIgnoreCase("permanent")) {
+            entry.setEndTime(null); // 永久封禁
+        } else {
+            entry.setStartTime(System.currentTimeMillis());
+            entry.setEndTime(parseDuration(duration));
         }
+
+        configManager.addBan(entry);
+        loadBans();
+        kickPlayer(target, entry.getReason());
+    }
+
+    private long parseDuration(String duration) {
+        if (duration.endsWith("d")) {
+            return System.currentTimeMillis() +
+                    TimeUnit.DAYS.toMillis(Integer.parseInt(duration.replace("d", "")));
+        } else if (duration.contains("-")) {
+            String[] dates = duration.split("-");
+            return parseAbsoluteDate(dates[1]);
+        }
+        return System.currentTimeMillis();
+    }
+
+    private long parseAbsoluteDate(String dateStr) {
+        return Instant.from(DateTimeFormatter.ofPattern("yyyy/MM/dd")
+                .parse(dateStr)).toEpochMilli();
+    }
+
+    public void unbanPlayer(String target) {
+        configManager.setBanState(target, false);
+        loadBans();
+    }
+
+    public void kickPlayer(String target, String reason) {
+        server.getAllPlayers().stream()
+                .filter(p -> p.getUsername().equalsIgnoreCase(target))
+                .forEach(p -> p.disconnect(Component.text("§c" + reason)));
+    }
+
+    private BanEntry findBanEntry(String uuid, String ip, String username) {
+        return banEntries.values().stream()
+                .filter(entry -> !isExpired(entry))
+                .filter(entry ->
+                        entry.getUuid().equals(uuid) ||
+                                entry.getIp().equals(ip) ||
+                                entry.getName().equalsIgnoreCase(username)
+                )
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isExpired(BanEntry entry) {
+        return !entry.isPermanent() && entry.getEndTime() < System.currentTimeMillis();
     }
 }

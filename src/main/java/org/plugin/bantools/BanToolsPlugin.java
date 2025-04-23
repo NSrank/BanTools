@@ -12,48 +12,39 @@ import org.slf4j.Logger;
 @Plugin(
         id = "bantools",
         name = "BanTools",
-        version = "1.1-SNAPSHOT"
+        version = "1.2",
+        description = "Advanced banning system for Velocity"
 )
 public class BanToolsPlugin {
-
-    @Inject
-    private ProxyServer server;
-
-    @Inject
-    private Logger logger;
-
+    @Inject private ProxyServer server;
+    @Inject private Logger logger;
     private BanManager banManager;
+    private ConfigManager configManager;
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        // 初始化封禁管理器
-        this.banManager = new BanManager(server, logger);
+        configManager = new ConfigManager();
+        banManager = new BanManager(server, logger, configManager);
 
-        // 注册事件监听器
         server.getEventManager().register(this, new LoginListener(banManager));
-
-        // 注册命令
         registerCommands();
 
         logger.info("===================================");
-        logger.info("BanTools 插件已加载");
-        logger.info("版本：1.1 | 作者：NSrank & Qwen2.5-Max");
+        logger.info("BanTools v1.2 已加载");
+        logger.info("作者：NSrank & Qwen2.5-Max");
         logger.info("===================================");
     }
 
     private void registerCommands() {
         CommandManager commandManager = server.getCommandManager();
 
-        // 创建命令元数据
         CommandMeta meta = commandManager.metaBuilder("bantools")
                 .aliases("bt")
                 .build();
+        commandManager.register(meta, new BanToolsCommand(banManager, configManager));
 
-        // 注册命令
-        commandManager.register(meta, new BanToolsCommand(banManager, server, logger));
-    }
-
-    public BanManager getBanManager() {
-        return banManager;
+        CommandMeta unbanMeta = commandManager.metaBuilder("unban")
+                .build();
+        commandManager.register(unbanMeta, new UnbanCommand(banManager));
     }
 }

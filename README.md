@@ -10,18 +10,29 @@
 
 ## 功能特性
 
-- **多维度封禁**：
-    - 支持按 UUID、IP 地址或用户名封禁玩家。
-    - 封禁权重优先级：UUID > IP > 用户名。
-- **动态封禁**：
-    - 使用 `/ban uuid <uuid>`、`/ban ip <ip>` 和 `/ban name <name>` 命令动态添加封禁数据。
-    - 封禁数据会实时写入配置文件（`config.conf`）。
-- **在线玩家处理**：
-    - 如果被封禁的玩家当前在线，则立即踢出。
-- **配置重载**：
-    - 使用 `/bantools reload` 命令动态重载配置文件，无需重启服务器。
-- **易用性**：
-    - 配置文件采用 HOCON 格式，易于维护和扩展。
+- **封禁功能**：
+    - 支持按 UUID、IP 地址或玩家名封禁。
+    - 默认封禁时间为永久（如果未指定时间）。
+    - 支持指定封禁时长（如 `7d` 表示 7 天，`2024/1/10-2025/01/10` 表示自定义日期范围）。
+    - 自动踢出被封禁的在线玩家。
+- **解封功能**：
+    - 支持通过 `/bantools unban` 命令解除指定玩家的封禁状态。
+    - 解封后不会删除封禁记录，而是将封禁状态标记为无效。
+- **踢出功能**：
+    - 支持通过 `/bantools kick` 命令立即踢出指定玩家。
+    - 可以指定踢出原因（默认使用配置文件中的默认踢出原因）。
+- **自动解封机制**：
+    - 如果指定了封禁时长，到达封禁结束时间后会自动解除封禁。
+- **多条件匹配**：
+    - 登录时会同时检查 UUID、IP 地址和玩家名是否匹配封禁记录。
+    - 如果任意一项匹配，则视为被封禁。
+- **配置文件支持**：
+    - 所有封禁记录存储在 `config.conf` 文件中，支持手动编辑。
+    - 配置文件中可以设置默认封禁原因和踢出原因。
+- **动态配置重载**：
+    - 支持通过 `/bantools reload` 命令动态重载配置文件，无需重启服务器。
+- **实时同步**：
+    - 所有封禁、解封和踢出操作会实时同步到所有下游服务器。
 
 ---
 
@@ -36,48 +47,53 @@
 ### 3. 启动服务器
 启动 Velocity 服务端，插件会自动生成默认配置文件 `plugins/BanTools/config.conf`。
 
+## 配置文件（`config.conf`）
+```
+defaults {
+  ban_reason = "违反服务器规则"
+  kick_reason = "管理员强制踢出"
+}
+
+bans {
+  "Player1": {
+    name: "Player1"
+    uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5"
+    ip: "192.168.1.100"
+    reason: "作弊行为"
+    start_time: 1698765432
+    end_time: null  # 永久封禁
+    state: true     # 封禁状态（true：生效，false：解除）
+  }
+}
+```
+- `defaults.ban_reason`：默认封禁原因。
+- `defaults.kick_reason`：默认踢出原因。
+- `bans`：存储所有封禁记录，每个条目包含以下字段：
+  - `name`：玩家名。
+  - `uuid`：玩家 UUID。
+  - `ip`：玩家 IP 地址。
+  - `reason`：封禁原因。
+  - `start_time`：封禁开始时间（Unix 时间戳）。
+  - `end_time`：封禁结束时间（Unix 时间戳），如果为 `null` 表示永久封禁。
+  - `state`：封禁状态（`true` 表示生效，`false` 表示解除）。
+
 ---
 
 ## 使用方法
 
 ### 命令列表
 
-| 命令                     | 权限   | 描述                                                                 |
-|--------------------------|--------|----------------------------------------------------------------------|
-| `/bantools reload`       | 管理员 | 重新加载插件配置文件，无需重启服务器。                               |
-| `/ban uuid <uuid>`       | 管理员 | 按 UUID 封禁玩家，并将其加入封禁列表。                              |
-| `/ban ip <ip>`           | 管理员 | 按 IP 地址封禁玩家，并将其加入封禁列表。                            |
-| `/ban name <name>`       | 管理员 | 按用户名封禁玩家，并将其加入封禁列表。                              |
+| 命令                             | 权限节点                      | 描述            |
+|--------------------------------|---------------------------|---------------|
+| `/bantools reload`             | `bantools.command.reload` | 重新加载插件配置文件。   |
+| `/bantools ban <type> <value>` | `bantools.command.ban`    | 封禁指定玩家。       |
+| `/bantools unban <player>`     | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
+| `/bantools kick <player>`      | `bantools.command.kick`   | 踢出指定玩家。       |
 
 ### 示例
-1. 封禁 UUID 为 `123e4567-e89b-12d3-a456-426614174000` 的玩家：`/ban uuid 123e4567-e89b-12d3-a456-426614174000`
-2. 封禁 IP 地址为 `192.168.1.100` 的玩家：`/ban ip 192.168.1.100`
-3. 封禁用户名为 `Bianpao_xiaohai` 的玩家：`/ban name Bianpao_xiaohai`
-
----
-
-## 配置文件
-
-插件的配置文件位于 `plugins/BanTools/config.conf`，格式如下：
-
-```
-banned {
- uuids = [
-     # 示例 UUID
-     # "123e4567-e89b-12d3-a456-426614174000"
- ]
- ips = [
-     # 示例 IP 地址
-     # "192.168.1.100"
- ]
- usernames = [
-     # 示例用户名
-     # "Bianpao_xiaohai"
- ]
-}
-
-你可以通过修改 `config.conf` 文件来添加或移除封禁数据。
-```
+1. 封禁用户名为 `Bianpao_xiaohai` 的玩家：`/bantools ban Bianpao_xiaohai`（默认封禁时长为永久，后可加封禁原因）
+2. 解封用户名为 `Steve` 的玩家：`/bantools unban Steve`
+3. 踢出用户名为 `Steve` 的玩家：`/bantools kick Steve`
 
 ---
 
@@ -116,18 +132,29 @@ banned {
 
 ## Features
 
-- **Multi-Dimensional Bans**:
-  - Supports banning players by UUID, IP address, or username.
-  - Ban priority: UUID > IP > Username.
-- **Dynamic Ban Management**:
-  - Use `/ban uuid <uuid>`, `/ban ip <ip>`, and `/ban name <name>` to dynamically add bans.
-  - Bans are instantly written to the configuration file (`config.conf`).
-- **Online Player Handling**:
-  - Banned players currently online are kicked immediately.
-- **Configuration Reload**:
-  - Use `/bantools reload` to reload the configuration file without restarting the server.
-- **User-Friendly**:
-  - Configuration files use HOCON format for easy maintenance and scalability.
+- **Ban Functionality**:
+    - Supports banning by UUID, IP address, or player name.
+    - Default ban duration is permanent (if no duration is specified).
+    - Supports specifying ban duration (e.g., `7d` for 7 days, `2024/1/10-2025/01/10` for a custom date range).
+    - Automatically kicks banned online players.
+- **Unban Functionality**:
+    - Supports unbanning a player using the `/bantools unban` command.
+    - Unbanning does not delete the ban record but marks the ban status as invalid.
+- **Kick Functionality**:
+    - Supports immediately kicking a player using the `/bantools kick` command.
+    - A custom kick reason can be specified (default uses the configured reason in the config file).
+- **Automatic Unban Mechanism**:
+    - If a ban duration is specified, the ban will automatically expire when the time ends.
+- **Multi-Condition Matching**:
+    - On login, checks if UUID, IP address, or player name matches any ban records.
+    - If any condition matches, the player is considered banned.
+- **Configuration File Support**:
+    - All ban records are stored in the `config.conf` file, which supports manual editing.
+    - The configuration file allows setting default ban and kick reasons.
+- **Dynamic Configuration Reload**:
+    - Supports dynamically reloading the configuration file via the `/bantools reload` command without restarting the server.
+- **Real-Time Synchronization**:
+    - All ban, unban, and kick operations are synchronized in real-time across all downstream servers.
 
 ---
 
@@ -142,51 +169,53 @@ Place the downloaded `BanTools.jar` file into the `plugins/` directory of your V
 ### 3. Start the Server
 Start the Velocity server. The plugin will automatically generate a default configuration file at `plugins/BanTools/config.conf`.
 
+## Configuration（`config.conf`）
+```
+defaults {
+  ban_reason = "违反服务器规则"
+  kick_reason = "管理员强制踢出"
+}
+
+bans {
+  "Player1": {
+    name: "Player1"
+    uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5"
+    ip: "192.168.1.100"
+    reason: "作弊行为"
+    start_time: 1698765432
+    end_time: null  # 永久封禁
+    state: true     # 封禁状态（true：生效，false：解除）
+  }
+}
+```
+- `defaults.ban_reason`: Default ban reason.
+- `defaults.kick_reason`: Default kick reason.
+- `bans`: Stores all ban records, each entry contains the following fields:
+  - `name`: Player name.
+  - `uuid`: Player UUID.
+  - `ip`: Player IP address.
+  - `reason`: Ban reason.
+  - `start_time`: Ban start time (Unix timestamp).
+  - `end_time`: Ban end time (Unix timestamp), set to `null` for permanent bans.
+  - `state`: Ban status (true for active, false for unban).
+
 ---
 
 ## Usage
 
 ### Commands
 
-| Command                   | Permission | Description                                                      |
-|---------------------------|------------|------------------------------------------------------------------|
-| `/bantools reload`        | Admin      | Reloads the plugin configuration without restarting the server. |
-| `/ban uuid <uuid>`        | Admin      | Bans a player by UUID and adds it to the ban list.              |
-| `/ban ip <ip>`            | Admin      | Bans a player by IP address and adds it to the ban list.        |
-| `/ban name <name>`        | Admin      | Bans a player by username and adds it to the ban list.          |
+| Command                             | Permission Node               | Description                          |
+|-------------------------------------|-------------------------------|--------------------------------------|
+| `/bantools reload`                  | `bantools.command.reload`     | Reloads the plugin configuration file. |
+| `/bantools ban <type> <value>`      | `bantools.command.ban`        | Bans the specified player.           |
+| `/bantools unban <player>`          | `bantools.command.unban`      | Unbans the specified player.         |
+| `/bantools kick <player>`           | `bantools.command.kick`       | Kicks the specified player.          |
 
 ### Examples
-1. Ban a player with UUID `123e4567-e89b-12d3-a456-426614174000`:  
-   `/ban uuid 123e4567-e89b-12d3-a456-426614174000`
-2. Ban a player with IP address `192.168.1.100`:  
-   `/ban ip 192.168.1.100`
-3. Ban a player with username `Bianpao_xiaohai`:  
-   `/ban name Bianpao_xiaohai`
-
----
-
-## Configuration
-
-The configuration file is located at `plugins/BanTools/config.conf` and follows this structure:
-
-```
-banned {
- uuids = [
-  # Example UUID
-  # "123e4567-e89b-12d3-a456-426614174000"
-    ]
- ips = [
-  # Example IP address
-  # "192.168.1.100"
-    ]
- usernames = [
-  # Example username
-  # "Bianpao_xiaohai"
-    ]
-}
-
-Modify `config.conf` to add or remove bans.
-```
+1. Ban a player named `Bianpao_xiaohai`: `/bantools ban Bianpao_xiaohai` (default ban duration is permanent; a reason can be added afterward).
+2. Unban a player named `Steve`: `/bantools unban Steve`.
+3. Kick a player named `Steve`: `/bantools kick Steve`.
 
 ---
 

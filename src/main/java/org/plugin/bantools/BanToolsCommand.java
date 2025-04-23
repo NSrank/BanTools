@@ -1,105 +1,103 @@
 package org.plugin.bantools;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
-import com.velocitypowered.api.proxy.Player;
-import com.velocitypowered.api.proxy.ProxyServer;
 import net.kyori.adventure.text.Component;
-import org.slf4j.Logger;
+import net.kyori.adventure.text.format.NamedTextColor;
 
-import java.io.File;
-import java.util.List;
+import java.util.Arrays;
 
 public class BanToolsCommand implements SimpleCommand {
-
     private final BanManager banManager;
-    private final ProxyServer server;
-    private final Logger logger;
+    private final ConfigManager configManager;
 
-    public BanToolsCommand(BanManager banManager, ProxyServer server, Logger logger) {
+    public BanToolsCommand(BanManager banManager, ConfigManager configManager) {
         this.banManager = banManager;
-        this.server = server;
-        this.logger = logger;
+        this.configManager = configManager;
     }
 
     @Override
     public void execute(Invocation invocation) {
-        CommandSource source = invocation.source();
         String[] args = invocation.arguments();
+        CommandSource source = invocation.source();
 
         if (args.length < 1) {
-            source.sendMessage(Component.text("Usage: /bantools reload OR /ban <uuid|ip|name> <value>"));
+            sendHelpMessage(source);
             return;
         }
 
-        String action = args[0].toLowerCase();
-
-        switch (action) {
-            case "reload":
-                handleReload(source);
-                break;
+        switch (args[0].toLowerCase()) {
             case "ban":
-                if (args.length < 3) {
-                    source.sendMessage(Component.text("Usage: /ban <uuid|ip|name> <value>"));
-                    return;
-                }
-                String type = args[1].toLowerCase();
-                String value = args[2];
-                handleBan(source, type, value);
+                handleBanCommand(args, source);
+                break;
+            case "kick":
+                handleKickCommand(args, source);
+                break;
+            case "reload":
+                banManager.loadBans();
+                source.sendMessage(Component.text("配置已重新加载", NamedTextColor.GREEN));
                 break;
             default:
-                source.sendMessage(Component.text("Invalid command. Use /bantools reload OR /ban <uuid|ip|name> <value>"));
+                sendHelpMessage(source);
         }
     }
 
-    private void handleReload(CommandSource source) {
-        try {
-            banManager.loadConfig();
-            source.sendMessage(Component.text("Configuration reloaded successfully."));
-            logger.info("Configuration reloaded by command.");
-        } catch (Exception e) {
-            source.sendMessage(Component.text("Failed to reload configuration."));
-            logger.error("Failed to reload configuration", e);
+    private void handleBanCommand(String[] args, CommandSource source) {
+        if (args.length < 2) {
+            sendBanUsage(source);
+            return;
         }
+
+        String target = args[1];
+        String reason = configManager.getDefaultBanReason();
+        String duration = null;
+
+        if (args.length >= 3) {
+            reason = args[2];
+        }
+        if (args.length >= 4) {
+            duration = args[3];
+        }
+
+        banManager.banPlayer(target, reason, duration);
+        source.sendMessage(Component.text("成功封禁玩家: " + target, NamedTextColor.GREEN));
     }
 
-    private void handleBan(CommandSource source, String type, String value) {
-        try {
-            switch (type) {
-                case "uuid":
-                    banManager.addBannedUuid(value);
-                    break;
-                case "ip":
-                    banManager.addBannedIp(value);
-                    break;
-                case "name":
-                    banManager.addBannedUsername(value);
-                    break;
-                default:
-                    source.sendMessage(Component.text("Invalid type. Use 'uuid', 'ip', or 'name'."));
-                    return;
-            }
-            source.sendMessage(Component.text("Successfully banned " + type + ": " + value));
-
-            // 踢出在线玩家
-            kickOnlinePlayers(value);
-
-            logger.info("Banned " + type + ": " + value);
-        } catch (Exception e) {
-            source.sendMessage(Component.text("Failed to ban " + type + ": " + value));
-            logger.error("Failed to ban " + type, e);
+    private void handleKickCommand(String[] args, CommandSource source) {
+        if (args.length < 2) {
+            sendKickUsage(source);
+            return;
         }
+
+        String target = args[1];
+        String reason = configManager.getDefaultKickReason();
+
+        if (args.length >= 3) {
+            reason = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        }
+
+        banManager.kickPlayer(target, reason);
+        source.sendMessage(Component.text("已踢出玩家: " + target, NamedTextColor.GREEN));
     }
 
-    private void kickOnlinePlayers(String value) {
-        for (Player player : server.getAllPlayers()) {
-            if (player.getUniqueId().toString().equals(value) ||
-                    player.getRemoteAddress().getAddress().getHostAddress().equals(value) ||
-                    player.getUsername().equalsIgnoreCase(value)) {
-                player.disconnect(net.kyori.adventure.text.Component.text("You have been banned."));
-            }
-        }
+    private void sendHelpMessage(CommandSource source) {
+        source.sendMessage(Component.text("BanTools 使用说明", NamedTextColor.YELLOW));
+        sendBanUsage(source);
+        sendKickUsage(source);
+        source.sendMessage(Component.text("/bt reload - 重新加载配置", NamedTextColor.GOLD));
+    }
+
+    private void sendBanUsage(CommandSource source) {
+        source.sendMessage(Component.text("封禁用法: /bt ban <玩家> [原因] [时长]", NamedTextColor.RED));
+    }
+
+    private void sendKickUsage(CommandSource source) {
+        source.sendMessage(Component.text("踢出用法: /bt kick <玩家> [原因]", NamedTextColor.RED));
+    }
+
+    @Override
+    public boolean hasPermission(Invocation invocation) {
+        return invocation.source().hasPermission("bantools.command.ban") ||
+                invocation.source().hasPermission("bantools.command.kick");
     }
 }
