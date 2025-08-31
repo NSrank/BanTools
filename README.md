@@ -88,6 +88,29 @@ bans {
 
 ---
 
+## 🔧 版本更新日志
+
+### v1.3.1 (最新版本)
+**重要修复：**
+- ✅ **修复配置文件扁平化问题**：解决了离线玩家封禁后重启服务器出现的配置加载错误
+- ✅ **智能配置修复**：自动检测并修复损坏的配置文件格式
+- ✅ **改进错误处理**：更好的配置文件解析和错误恢复机制
+- ✅ **安全备份机制**：损坏的配置文件会自动备份，避免数据丢失
+
+**技术改进：**
+- 实现了扁平化配置检测算法
+- 添加了自动配置重建功能
+- 改进了配置文件保存格式
+- 增强了离线玩家处理逻辑
+
+### v1.3.0
+- 修复了权限检查漏洞
+- 改进了离线玩家封禁处理
+- 添加了输入验证和安全检查
+- 更新了README文档
+
+---
+
 ## 使用方法
 
 ### 命令列表
@@ -115,6 +138,59 @@ bans {
 - 定期检查配置文件中的封禁记录是否正确加载
 - 建议结合其他安全插件使用，如 IP 白名单、反作弊插件等
 - 在重要服务器上使用前请先在测试环境验证功能
+
+---
+
+## 🛠️ 故障排除
+
+### 常见问题
+
+**Q: 重启服务器后出现 "Invalid data type for player 'xxx.state'" 错误**
+A: 这是配置文件扁平化问题，v1.3.1已自动修复。插件会显示"检测到扁平化的配置文件，尝试修复..."并自动重建配置。
+
+**Q: 封禁的离线玩家无法正确加载**
+A: 确保使用v1.3.1或更高版本，该版本已修复离线玩家处理逻辑。
+
+**Q: 配置文件损坏怎么办**
+A: 插件会自动备份损坏的配置文件（文件名包含时间戳），然后重新创建默认配置。
+
+**Q: 权限设置问题**
+A: 确保正确分配权限：
+- `bantools.command.ban` - 封禁权限
+- `bantools.command.kick` - 踢出权限
+- `bantools.command.unban` - 解封权限
+- `bantools.command.reload` - 重载权限
+
+### 配置文件格式
+
+正确的配置文件格式应该是：
+```hocon
+defaults {
+  ban_reason = "违反服务器规则"
+  kick_reason = "管理员强制踢出"
+}
+
+bans {
+  "PlayerName": {
+    name: "PlayerName"
+    uuid: "player-uuid-here"  # 在线封禁时自动填充
+    ip: "player-ip-here"      # 在线封禁时自动填充
+    reason: "封禁原因"
+    start_time: 1698765432
+    end_time: null            # null表示永久封禁
+    state: true               # true表示生效
+  }
+  "OfflinePlayer": {
+    name: "OfflinePlayer"
+    uuid: null                # 离线封禁，登录时自动更新
+    ip: null                  # 离线封禁，登录时自动更新
+    reason: "离线封禁"
+    start_time: 1698765432
+    end_time: null
+    state: true
+  }
+}
+```
 
 ---
 
@@ -231,6 +307,29 @@ bans {
 
 ---
 
+## 🔧 Version Changelog
+
+### v1.3.1 (Latest)
+**Critical Fixes:**
+- ✅ **Fixed config file flattening issue**: Resolved configuration loading errors after restarting server with offline player bans
+- ✅ **Smart config repair**: Automatically detects and repairs corrupted configuration file formats
+- ✅ **Improved error handling**: Better configuration file parsing and error recovery mechanisms
+- ✅ **Safe backup mechanism**: Corrupted config files are automatically backed up to prevent data loss
+
+**Technical Improvements:**
+- Implemented flattened configuration detection algorithm
+- Added automatic configuration rebuilding functionality
+- Improved configuration file save format
+- Enhanced offline player handling logic
+
+### v1.3.0
+- Fixed permission check vulnerabilities
+- Improved offline player ban handling
+- Added input validation and security checks
+- Updated README documentation
+
+---
+
 ## Usage
 
 ### Commands
@@ -259,6 +358,59 @@ bans {
 - Regularly check if the ban records in the configuration file are correctly loaded
 - Consider using additional security plugins such as IP whitelists and anti-cheat plugins
 - Test the plugin thoroughly in a non-production environment before deployment
+
+---
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+**Q: Getting "Invalid data type for player 'xxx.state'" errors after server restart**
+A: This is a config file flattening issue, automatically fixed in v1.3.1. The plugin will show "检测到扁平化的配置文件，尝试修复..." and automatically rebuild the configuration.
+
+**Q: Offline banned players not loading correctly**
+A: Ensure you're using v1.3.1 or higher, which has fixed offline player handling logic.
+
+**Q: What if my config file gets corrupted**
+A: The plugin automatically backs up corrupted config files (filename includes timestamp) and recreates default configuration.
+
+**Q: Permission setup issues**
+A: Ensure correct permission assignment:
+- `bantools.command.ban` - Ban permission
+- `bantools.command.kick` - Kick permission
+- `bantools.command.unban` - Unban permission
+- `bantools.command.reload` - Reload permission
+
+### Configuration File Format
+
+The correct configuration file format should be:
+```hocon
+defaults {
+  ban_reason = "Rule violation"
+  kick_reason = "Kicked by admin"
+}
+
+bans {
+  "PlayerName": {
+    name: "PlayerName"
+    uuid: "player-uuid-here"  # Auto-filled when banning online players
+    ip: "player-ip-here"      # Auto-filled when banning online players
+    reason: "Ban reason"
+    start_time: 1698765432
+    end_time: null            # null means permanent ban
+    state: true               # true means active
+  }
+  "OfflinePlayer": {
+    name: "OfflinePlayer"
+    uuid: null                # Offline ban, auto-updated on login
+    ip: null                  # Offline ban, auto-updated on login
+    reason: "Offline ban"
+    start_time: 1698765432
+    end_time: null
+    state: true
+  }
+}
+```
 
 ---
 
