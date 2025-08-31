@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -37,11 +36,31 @@ public class BanManager {
     public boolean isBanned(String uuid, String ip, String username) {
         return banEntries.values().stream()
                 .filter(entry -> !isExpired(entry))
-                .anyMatch(entry ->
-                        entry.getUuid().equals(uuid) ||
-                                entry.getIp().equals(ip) ||
-                                entry.getName().equalsIgnoreCase(username)
-                );
+                .anyMatch(entry -> {
+                    // 优先检查玩家名（最可靠的标识符）
+                    if (entry.getName().equalsIgnoreCase(username)) {
+                        // 如果是离线封禁（UUID或IP为null），更新信息
+                        if ((entry.getUuid() == null || entry.getIp() == null) &&
+                            uuid != null && !uuid.isEmpty() && ip != null && !ip.isEmpty()) {
+                            updateBanEntryInfo(entry, uuid, ip);
+                        }
+                        return true;
+                    }
+                    // 只有当UUID和IP不为null且不为空时才进行匹配
+                    return (entry.getUuid() != null && entry.getUuid().equals(uuid)) ||
+                           (entry.getIp() != null && entry.getIp().equals(ip));
+                });
+    }
+
+    private void updateBanEntryInfo(BanEntry entry, String uuid, String ip) {
+        try {
+            entry.setUuid(uuid);
+            entry.setIp(ip);
+            configManager.updateBanEntry(entry);
+            logger.info("更新了玩家 " + entry.getName() + " 的封禁信息");
+        } catch (Exception e) {
+            logger.error("更新封禁信息失败", e);
+        }
     }
 
     public String getBanMessage(String uuid, String ip, String username) {
@@ -59,13 +78,30 @@ public class BanManager {
     }
 
     public void banPlayer(String target, String reason, String duration) {
+        // 输入验证
+        if (target == null || target.trim().isEmpty()) {
+            logger.warn("尝试封禁空的玩家名");
+            return;
+        }
+        if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
+            logger.warn("无效的玩家名格式: " + target);
+            return;
+        }
+
         Player player = server.getPlayer(target).orElse(null);
         BanEntry entry = new BanEntry();
 
         entry.setName(target);
-        entry.setUuid(player != null ? player.getUniqueId().toString() : "unknown");
-        entry.setIp(player != null ? player.getRemoteAddress().getAddress().getHostAddress() : "unknown");
-        entry.setReason(reason.isEmpty() ? configManager.getDefaultBanReason() : reason);
+        // 改进离线玩家处理 - 如果玩家不在线，只记录玩家名，UUID和IP在玩家登录时验证
+        if (player != null) {
+            entry.setUuid(player.getUniqueId().toString());
+            entry.setIp(player.getRemoteAddress().getAddress().getHostAddress());
+        } else {
+            entry.setUuid(null); // null表示未知，登录时会更新
+            entry.setIp(null);
+            logger.info("封禁离线玩家: " + target + "，UUID和IP将在玩家下次登录时更新");
+        }
+        entry.setReason(reason == null || reason.trim().isEmpty() ? configManager.getDefaultBanReason() : reason.trim());
 
         // 处理封禁时间（默认永久）
         if (duration == null || duration.isEmpty() || duration.equalsIgnoreCase("permanent")) {
@@ -81,19 +117,37 @@ public class BanManager {
     }
 
     private long parseDuration(String duration) {
-        if (duration.endsWith("d")) {
-            return System.currentTimeMillis() +
-                    TimeUnit.DAYS.toMillis(Integer.parseInt(duration.replace("d", "")));
-        } else if (duration.contains("-")) {
-            String[] dates = duration.split("-");
-            return parseAbsoluteDate(dates[1]);
+        try {
+            if (duration.endsWith("d")) {
+                String dayStr = duration.replace("d", "");
+                int days = Integer.parseInt(dayStr);
+                if (days <= 0 || days > 3650) { // 最多10年
+                    logger.warn("无效的封禁天数: " + days);
+                    return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1); // 默认1天
+                }
+                return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(days);
+            } else if (duration.contains("-")) {
+                String[] dates = duration.split("-");
+                if (dates.length != 2) {
+                    logger.warn("无效的日期范围格式: " + duration);
+                    return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+                }
+                return parseAbsoluteDate(dates[1]);
+            }
+        } catch (NumberFormatException e) {
+            logger.warn("解析封禁时长失败: " + duration, e);
         }
-        return System.currentTimeMillis();
+        return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1); // 默认1天
     }
 
     private long parseAbsoluteDate(String dateStr) {
-        return Instant.from(DateTimeFormatter.ofPattern("yyyy/MM/dd")
-                .parse(dateStr)).toEpochMilli();
+        try {
+            return Instant.from(DateTimeFormatter.ofPattern("yyyy/MM/dd")
+                    .parse(dateStr)).toEpochMilli();
+        } catch (Exception e) {
+            logger.warn("解析日期失败: " + dateStr, e);
+            return System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1); // 默认1天
+        }
     }
 
     public void unbanPlayer(String target) {

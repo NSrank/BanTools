@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 @Plugin(
         id = "bantools",
         name = "BanTools",
-        version = "1.2",
+        version = "1.3",
         description = "Advanced banning system for Velocity"
 )
 public class BanToolsPlugin {
@@ -30,8 +30,8 @@ public class BanToolsPlugin {
         registerCommands();
 
         logger.info("===================================");
-        logger.info("BanTools v1.2 已加载");
-        logger.info("作者：NSrank & Qwen2.5-Max");
+        logger.info("BanTools v1.3 已加载");
+        logger.info("作者：NSrank & Qwen2.5-Max & Augment");
         logger.info("===================================");
     }
 

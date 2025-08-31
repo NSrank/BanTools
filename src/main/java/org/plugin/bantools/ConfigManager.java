@@ -63,6 +63,12 @@ public class ConfigManager {
         saveConfig(updatedConfig);
     }
 
+    public void updateBanEntry(BanEntry entry) {
+        Config updatedConfig = config.withValue("bans." + entry.getName(),
+                ConfigValueFactory.fromMap(entryToMap(entry)));
+        saveConfig(updatedConfig);
+    }
+
     private Map<String, Object> entryToMap(BanEntry entry) {
         Map<String, Object> map = new HashMap<>();
         map.put("name", entry.getName());
@@ -89,7 +95,7 @@ public class ConfigManager {
         bans.clear();
 
         // 确保 "bans" 字段存在且为对象
-        if (!config.hasPath("bans") || !config.getObject("bans").isEmpty()) {
+        if (!config.hasPath("bans") || config.getObject("bans").isEmpty()) {
             return; // 如果没有封禁数据，则直接返回
         }
 

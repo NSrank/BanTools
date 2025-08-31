@@ -1,6 +1,6 @@
 # BanTools - Velocity 封禁管理插件
 
-![Velocity](https://img.shields.io/badge/Velocity-3.x-blue) ![Java](https://img.shields.io/badge/Java-11-green) ![License](https://img.shields.io/badge/License-GPLv3-green.svg)
+![Velocity](https://img.shields.io/badge/Velocity-3.x-blue) ![Java](https://img.shields.io/badge/Java-17-green) ![License](https://img.shields.io/badge/License-GPLv3-green.svg)
 
 **BanTools** 是一个专为 Minecraft Velocity 服务端设计的高级封禁管理插件。它支持通过 UUID、IP 地址或用户名封禁玩家，并提供动态配置重载和实时踢出在线玩家的功能。
 
@@ -55,11 +55,20 @@ defaults {
 }
 
 bans {
-  "Player1": {
-    name: "Player1"
+  "OnlinePlayer": {
+    name: "OnlinePlayer"
     uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5"
     ip: "192.168.1.100"
     reason: "作弊行为"
+    start_time: 1698765432
+    end_time: null  # 永久封禁
+    state: true     # 封禁状态（true：生效，false：解除）
+  }
+  "OfflinePlayer": {
+    name: "OfflinePlayer"
+    uuid: null      # 离线封禁，登录时自动更新
+    ip: null        # 离线封禁，登录时自动更新
+    reason: "违反服务器规则"
     start_time: 1698765432
     end_time: null  # 永久封禁
     state: true     # 封禁状态（true：生效，false：解除）
@@ -83,17 +92,29 @@ bans {
 
 ### 命令列表
 
-| 命令                             | 权限节点                      | 描述            |
-|--------------------------------|---------------------------|---------------|
-| `/bantools reload`             | `bantools.command.reload` | 重新加载插件配置文件。   |
-| `/bantools ban <type> <value>` | `bantools.command.ban`    | 封禁指定玩家。       |
-| `/bantools unban <player>`     | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
-| `/bantools kick <player>`      | `bantools.command.kick`   | 踢出指定玩家。       |
+| 命令                                    | 别名  | 权限节点                      | 描述            |
+|---------------------------------------|-----|---------------------------|---------------|
+| `/bantools reload`                    | `/bt reload` | `bantools.command.reload` | 重新加载插件配置文件。   |
+| `/bantools ban <玩家> [原因] [时长]`      | `/bt ban <玩家> [原因] [时长]` | `bantools.command.ban`    | 封禁指定玩家。       |
+| `/unban <玩家>`                       | 无   | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
+| `/bantools kick <玩家> [原因]`          | `/bt kick <玩家> [原因]` | `bantools.command.kick`   | 踢出指定玩家。       |
 
 ### 示例
-1. 封禁用户名为 `Bianpao_xiaohai` 的玩家：`/bantools ban Bianpao_xiaohai`（默认封禁时长为永久，后可加封禁原因）
-2. 解封用户名为 `Steve` 的玩家：`/bantools unban Steve`
-3. 踢出用户名为 `Steve` 的玩家：`/bantools kick Steve`
+1. 封禁用户名为 `Bianpao_xiaohai` 的玩家：`/bantools ban Bianpao_xiaohai` 或 `/bt ban Bianpao_xiaohai`
+2. 封禁玩家并指定原因：`/bt ban Steve 恶意破坏`
+3. 封禁玩家并指定时长：`/bt ban Steve 作弊行为 7d`（7天后自动解封）
+4. 解封用户名为 `Steve` 的玩家：`/unban Steve`
+5. 踢出用户名为 `Steve` 的玩家：`/bt kick Steve 违反规则`
+
+---
+
+## ⚠️ 安全注意事项
+
+### 安全建议
+- 谨慎分配 `bantools.command.kick` 和 `bantools.command.ban` 权限
+- 定期检查配置文件中的封禁记录是否正确加载
+- 建议结合其他安全插件使用，如 IP 白名单、反作弊插件等
+- 在重要服务器上使用前请先在测试环境验证功能
 
 ---
 
@@ -122,7 +143,7 @@ bans {
 
 # BanTools - Velocity Ban Management Plugin
 
-![Velocity](https://img.shields.io/badge/Velocity-3.x-blue) ![Java](https://img.shields.io/badge/Java-11-green) ![License](https://img.shields.io/badge/License-GPLv3-green.svg)
+![Velocity](https://img.shields.io/badge/Velocity-3.x-blue) ![Java](https://img.shields.io/badge/Java-17-green) ![License](https://img.shields.io/badge/License-GPLv3-green.svg)
 
 **BanTools** is an advanced ban management plugin designed for Minecraft Velocity servers. It supports banning players by UUID, IP address, or username, and provides dynamic configuration reloading and real-time kicking of online players.
 
@@ -177,14 +198,23 @@ defaults {
 }
 
 bans {
-  "Player1": {
-    name: "Player1"
+  "OnlinePlayer": {
+    name: "OnlinePlayer"
     uuid: "069a79f4-44e9-4726-a5be-fca90e38aaf5"
     ip: "192.168.1.100"
-    reason: "作弊行为"
+    reason: "Cheating"
     start_time: 1698765432
-    end_time: null  # 永久封禁
-    state: true     # 封禁状态（true：生效，false：解除）
+    end_time: null  # Permanent ban
+    state: true     # Ban status (true: active, false: unbanned)
+  }
+  "OfflinePlayer": {
+    name: "OfflinePlayer"
+    uuid: null      # Offline ban, auto-updated on login
+    ip: null        # Offline ban, auto-updated on login
+    reason: "Rule violation"
+    start_time: 1698765432
+    end_time: null  # Permanent ban
+    state: true     # Ban status (true: active, false: unbanned)
   }
 }
 ```
@@ -205,17 +235,30 @@ bans {
 
 ### Commands
 
-| Command                             | Permission Node               | Description                          |
-|-------------------------------------|-------------------------------|--------------------------------------|
-| `/bantools reload`                  | `bantools.command.reload`     | Reloads the plugin configuration file. |
-| `/bantools ban <type> <value>`      | `bantools.command.ban`        | Bans the specified player.           |
-| `/bantools unban <player>`          | `bantools.command.unban`      | Unbans the specified player.         |
-| `/bantools kick <player>`           | `bantools.command.kick`       | Kicks the specified player.          |
+| Command                                    | Alias  | Permission Node               | Description                          |
+|--------------------------------------------|--------|-------------------------------|--------------------------------------|
+| `/bantools reload`                         | `/bt reload` | `bantools.command.reload`     | Reloads the plugin configuration file. |
+| `/bantools ban <player> [reason] [duration]` | `/bt ban <player> [reason] [duration]` | `bantools.command.ban`        | Bans the specified player.           |
+| `/unban <player>`                          | None   | `bantools.command.unban`      | Unbans the specified player.         |
+| `/bantools kick <player> [reason]`        | `/bt kick <player> [reason]` | `bantools.command.kick`       | Kicks the specified player.          |
 
 ### Examples
-1. Ban a player named `Bianpao_xiaohai`: `/bantools ban Bianpao_xiaohai` (default ban duration is permanent; a reason can be added afterward).
-2. Unban a player named `Steve`: `/bantools unban Steve`.
-3. Kick a player named `Steve`: `/bantools kick Steve`.
+1. Ban a player named `Bianpao_xiaohai`: `/bantools ban Bianpao_xiaohai` or `/bt ban Bianpao_xiaohai`
+2. Ban a player with reason: `/bt ban Steve Malicious behavior`
+3. Ban a player with duration: `/bt ban Steve Cheating 7d` (auto-unban after 7 days)
+4. Unban a player named `Steve`: `/unban Steve`
+5. Kick a player named `Steve`: `/bt kick Steve Rule violation`
+
+---
+
+## Security Considerations
+
+### Security Recommendations
+
+- Exercise caution when granting `bantools.command.kick` and `bantools.command.ban` permissions
+- Regularly check if the ban records in the configuration file are correctly loaded
+- Consider using additional security plugins such as IP whitelists and anti-cheat plugins
+- Test the plugin thoroughly in a non-production environment before deployment
 
 ---
 

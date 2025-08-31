@@ -1,9 +1,9 @@
 {
   "id": "bantools",
   "name": "BanTools",
-  "version": "1.2",
+  "version": "1.3",
   "description": "Velocity封禁管理插件",
-  "authors": ["NSrank & Qwen2.5-Max"],
+  "authors": ["NSrank & Qwen2.5-Max & Augment"],
   "main": "org.plugins.bantools.BanToolsPlugin",
   "dependencies": [
     {

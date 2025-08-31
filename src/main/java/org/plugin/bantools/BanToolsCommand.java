@@ -97,7 +97,22 @@ public class BanToolsCommand implements SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return invocation.source().hasPermission("bantools.command.ban") ||
-                invocation.source().hasPermission("bantools.command.kick");
+        String[] args = invocation.arguments();
+        if (args.length < 1) {
+            return invocation.source().hasPermission("bantools.command.ban") ||
+                    invocation.source().hasPermission("bantools.command.kick") ||
+                    invocation.source().hasPermission("bantools.command.reload");
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "ban":
+                return invocation.source().hasPermission("bantools.command.ban");
+            case "kick":
+                return invocation.source().hasPermission("bantools.command.kick");
+            case "reload":
+                return invocation.source().hasPermission("bantools.command.reload");
+            default:
+                return false;
+        }
     }
 }
