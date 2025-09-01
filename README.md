@@ -21,6 +21,12 @@
 - **踢出功能**：
     - 支持通过 `/bantools kick` 命令立即踢出指定玩家。
     - 可以指定踢出原因（默认使用配置文件中的默认踢出原因）。
+- **重复封禁检查**：
+    - 自动检查玩家是否已被封禁，防止重复封禁操作。
+    - 显示现有封禁的详细信息（理由和时长）。
+- **重复解封检查**：
+    - 自动检查玩家是否已被解封或未被封禁，防止重复解封操作。
+    - 提供清晰的状态提示信息。
 - **自动解封机制**：
     - 如果指定了封禁时长，到达封禁结束时间后会自动解除封禁。
 - **多条件匹配**：
@@ -90,7 +96,32 @@ bans {
 
 ## 🔧 版本更新日志
 
-### v1.3.1 (最新版本)
+### v1.3.2 (最新版本)
+**重要改进：**
+- ✅ **解封命令重构**：将独立的 `/unban` 命令整合到 `/bantools unban` 或 `/bt unban` 中，避免与其他插件冲突
+- ✅ **修复数据同步问题**：封禁和解封操作后自动刷新内存数据，无需重启服务器
+- ✅ **防重复封禁功能**：自动检查现有封禁记录，防止重复封禁操作
+- ✅ **重复解封检查**：自动检查玩家解封状态，防止重复解封操作
+- ✅ **统一命令体系**：所有命令现在都使用统一的 `/bantools` 或 `/bt` 前缀
+- ✅ **智能状态检测**：区分"已解封"、"未封禁"和"无记录"三种状态
+
+**新增功能：**
+- 🆕 **重复封禁检查**：封禁前自动检查玩家是否已被封禁
+- 🆕 **详细封禁信息提示**：显示现有封禁的理由和时长
+- 🆕 **实时数据同步**：所有封禁操作立即生效，无需重启
+- 🆕 **解封状态验证**：解封前检查玩家当前封禁状态
+- 🆕 **详细状态提示**：提供清晰的解封结果反馈
+- 🆕 **权限分离优化**：unban操作使用独立的权限节点
+
+**用户体验改进：**
+- 命令冲突风险降低：避免与其他插件的 `/unban` 命令冲突
+- 操作反馈更清晰：明确区分不同的解封失败原因
+- 命令体系更统一：所有功能都在一个命令下管理
+
+**技术改进：**
+- 优化了内存数据同步机制
+
+### v1.3.1
 **重要修复：**
 - ✅ **修复配置文件扁平化问题**：解决了离线玩家封禁后重启服务器出现的配置加载错误
 - ✅ **智能配置修复**：自动检测并修复损坏的配置文件格式
@@ -102,6 +133,7 @@ bans {
 - 添加了自动配置重建功能
 - 改进了配置文件保存格式
 - 增强了离线玩家处理逻辑
+- 优化了内存数据同步机制
 
 ### v1.3.0
 - 修复了权限检查漏洞
@@ -119,15 +151,19 @@ bans {
 |---------------------------------------|-----|---------------------------|---------------|
 | `/bantools reload`                    | `/bt reload` | `bantools.command.reload` | 重新加载插件配置文件。   |
 | `/bantools ban <玩家> [原因] [时长]`      | `/bt ban <玩家> [原因] [时长]` | `bantools.command.ban`    | 封禁指定玩家。       |
-| `/unban <玩家>`                       | 无   | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
+| `/bantools unban <玩家>`              | `/bt unban <玩家>` | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
 | `/bantools kick <玩家> [原因]`          | `/bt kick <玩家> [原因]` | `bantools.command.kick`   | 踢出指定玩家。       |
 
 ### 示例
 1. 封禁用户名为 `Bianpao_xiaohai` 的玩家：`/bantools ban Bianpao_xiaohai` 或 `/bt ban Bianpao_xiaohai`
 2. 封禁玩家并指定原因：`/bt ban Steve 恶意破坏`
 3. 封禁玩家并指定时长：`/bt ban Steve 作弊行为 7d`（7天后自动解封）
-4. 解封用户名为 `Steve` 的玩家：`/unban Steve`
-5. 踢出用户名为 `Steve` 的玩家：`/bt kick Steve 违反规则`
+4. 尝试重复封禁已封禁的玩家：`/bt ban Steve 再次作弊`
+   - 系统提示：`该玩家已被封禁！理由：作弊行为，时长：至 2024/01/17`
+5. 解封用户名为 `Steve` 的玩家：`/bt unban Steve`
+6. 尝试重复解封已解封的玩家：`/bt unban Steve`
+   - 系统提示：`该玩家未被封禁或已被解封！`
+7. 踢出用户名为 `Steve` 的玩家：`/bt kick Steve 违反规则`
 
 ---
 
@@ -160,6 +196,12 @@ A: 确保正确分配权限：
 - `bantools.command.kick` - 踢出权限
 - `bantools.command.unban` - 解封权限
 - `bantools.command.reload` - 重载权限
+
+**Q: 解封命令不工作或与其他插件冲突**
+A: v1.3.2已将解封命令整合到 `/bt unban` 中，不再使用独立的 `/unban` 命令，避免了插件冲突。
+
+**Q: 提示"该玩家未被封禁或已被解封"**
+A: 这表示玩家当前没有有效的封禁记录，可能已经被解封或从未被封禁。
 
 ### 配置文件格式
 
@@ -240,6 +282,12 @@ bans {
 - **Kick Functionality**:
     - Supports immediately kicking a player using the `/bantools kick` command.
     - A custom kick reason can be specified (default uses the configured reason in the config file).
+- **Duplicate Ban Prevention**:
+    - Automatically checks if a player is already banned to prevent duplicate ban operations.
+    - Displays detailed information about existing bans (reason and duration).
+- **Duplicate Unban Prevention**:
+    - Automatically checks if a player is already unbanned or not banned to prevent duplicate unban operations.
+    - Provides clear status notification messages.
 - **Automatic Unban Mechanism**:
     - If a ban duration is specified, the ban will automatically expire when the time ends.
 - **Multi-Condition Matching**:
@@ -309,7 +357,32 @@ bans {
 
 ## 🔧 Version Changelog
 
-### v1.3.1 (Latest)
+### v1.3.2 (Latest)
+**Major Improvements:**
+- ✅ **Unban Command Refactoring**: Integrated standalone `/unban` command into `/bantools unban` or `/bt unban` to avoid conflicts with other plugins
+- ✅ **Fixed data synchronization**: Ban and unban operations now automatically refresh memory data without server restart
+- ✅ **Duplicate ban prevention**: Automatically checks existing ban records to prevent duplicate ban operations
+- ✅ **Duplicate Unban Prevention**: Automatically checks player unban status to prevent duplicate unban operations
+- ✅ **Unified Command System**: All commands now use unified `/bantools` or `/bt` prefix
+- ✅ **Smart Status Detection**: Distinguishes between "already unbanned", "not banned", and "no record" states
+
+**New Features:**
+- 🆕 **Duplicate ban checking**: Automatically checks if player is already banned before banning
+- 🆕 **Detailed ban info display**: Shows existing ban reason and duration
+- 🆕 **Real-time data sync**: All ban operations take effect immediately without restart
+- 🆕 **Unban Status Validation**: Checks player's current ban status before unbanning
+- 🆕 **Detailed Status Feedback**: Provides clear unban result notifications
+- 🆕 **Optimized Permission Separation**: Unban operations use independent permission nodes
+
+**User Experience Improvements:**
+- Reduced command conflict risk: Avoids conflicts with other plugins' `/unban` commands
+- Clearer operation feedback: Clearly distinguishes different unban failure reasons
+- More unified command system: All features managed under one command
+
+**Technical Improvements:**
+- Optimized memory data synchronization mechanism
+
+### v1.3.1
 **Critical Fixes:**
 - ✅ **Fixed config file flattening issue**: Resolved configuration loading errors after restarting server with offline player bans
 - ✅ **Smart config repair**: Automatically detects and repairs corrupted configuration file formats
@@ -338,15 +411,19 @@ bans {
 |--------------------------------------------|--------|-------------------------------|--------------------------------------|
 | `/bantools reload`                         | `/bt reload` | `bantools.command.reload`     | Reloads the plugin configuration file. |
 | `/bantools ban <player> [reason] [duration]` | `/bt ban <player> [reason] [duration]` | `bantools.command.ban`        | Bans the specified player.           |
-| `/unban <player>`                          | None   | `bantools.command.unban`      | Unbans the specified player.         |
+| `/bantools unban <player>`                | `/bt unban <player>` | `bantools.command.unban`      | Unbans the specified player.         |
 | `/bantools kick <player> [reason]`        | `/bt kick <player> [reason]` | `bantools.command.kick`       | Kicks the specified player.          |
 
 ### Examples
 1. Ban a player named `Bianpao_xiaohai`: `/bantools ban Bianpao_xiaohai` or `/bt ban Bianpao_xiaohai`
 2. Ban a player with reason: `/bt ban Steve Malicious behavior`
 3. Ban a player with duration: `/bt ban Steve Cheating 7d` (auto-unban after 7 days)
-4. Unban a player named `Steve`: `/unban Steve`
-5. Kick a player named `Steve`: `/bt kick Steve Rule violation`
+4. Try to ban an already banned player: `/bt ban Steve Cheating again`
+   - System response: `该玩家已被封禁！理由：Cheating，时长：至 2024/01/17`
+5. Unban a player named `Steve`: `/bt unban Steve`
+6. Try to unban an already unbanned player: `/bt unban Steve`
+   - System response: `该玩家未被封禁或已被解封！`
+7. Kick a player named `Steve`: `/bt kick Steve Rule violation`
 
 ---
 
@@ -380,6 +457,12 @@ A: Ensure correct permission assignment:
 - `bantools.command.kick` - Kick permission
 - `bantools.command.unban` - Unban permission
 - `bantools.command.reload` - Reload permission
+
+**Q: Unban command not working or conflicts with other plugins**
+A: v1.3.2 has integrated the unban command into `/bt unban`, no longer using the standalone `/unban` command, avoiding plugin conflicts.
+
+**Q: Getting "该玩家未被封禁或已被解封" message**
+A: This indicates the player currently has no active ban record, possibly already unbanned or never banned.
 
 ### Configuration File Format
 

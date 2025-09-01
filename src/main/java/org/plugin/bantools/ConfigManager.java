@@ -82,18 +82,21 @@ public class ConfigManager {
         Config updatedConfig = config.withValue("bans." + entry.getName(),
                 ConfigValueFactory.fromMap(entryToMap(entry)));
         saveConfig(updatedConfig);
+        loadBans(); // 重新加载封禁数据到内存
     }
 
     public void setBanState(String target, boolean state) {
         Config updatedConfig = config.withValue("bans." + target + ".state",
                 ConfigValueFactory.fromAnyRef(state));
         saveConfig(updatedConfig);
+        loadBans(); // 重新加载封禁数据到内存
     }
 
     public void updateBanEntry(BanEntry entry) {
         Config updatedConfig = config.withValue("bans." + entry.getName(),
                 ConfigValueFactory.fromMap(entryToMap(entry)));
         saveConfig(updatedConfig);
+        loadBans(); // 重新加载封禁数据到内存
     }
 
     private Map<String, Object> entryToMap(BanEntry entry) {

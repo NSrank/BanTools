@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 @Plugin(
         id = "bantools",
         name = "BanTools",
-        version = "1.3.1",
+        version = "1.3.2",
         description = "Advanced banning system for Velocity"
 )
 public class BanToolsPlugin {
@@ -30,7 +30,7 @@ public class BanToolsPlugin {
         registerCommands();
 
         logger.info("===================================");
-        logger.info("BanTools v1.3.1 已加载");
+        logger.info("BanTools v1.3.2 已加载");
         logger.info("作者：NSrank & Qwen2.5-Max & Augment");
         logger.info("===================================");
     }
@@ -42,9 +42,5 @@ public class BanToolsPlugin {
                 .aliases("bt")
                 .build();
         commandManager.register(meta, new BanToolsCommand(banManager, configManager));
-
-        CommandMeta unbanMeta = commandManager.metaBuilder("unban")
-                .build();
-        commandManager.register(unbanMeta, new UnbanCommand(banManager));
     }
 }

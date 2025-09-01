@@ -30,6 +30,9 @@ public class BanToolsCommand implements SimpleCommand {
             case "ban":
                 handleBanCommand(args, source);
                 break;
+            case "unban":
+                handleUnbanCommand(args, source);
+                break;
             case "kick":
                 handleKickCommand(args, source);
                 break;
@@ -59,8 +62,41 @@ public class BanToolsCommand implements SimpleCommand {
             duration = args[3];
         }
 
-        banManager.banPlayer(target, reason, duration);
-        source.sendMessage(Component.text("成功封禁玩家: " + target, NamedTextColor.GREEN));
+        String result = banManager.banPlayer(target, reason, duration);
+        if (result != null) {
+            // 封禁失败，显示错误信息
+            source.sendMessage(Component.text(result, NamedTextColor.RED));
+        } else {
+            // 封禁成功
+            source.sendMessage(Component.text("成功封禁玩家: " + target, NamedTextColor.GREEN));
+        }
+    }
+
+    private void handleUnbanCommand(String[] args, CommandSource source) {
+        if (args.length != 2) {
+            sendUnbanUsage(source);
+            return;
+        }
+
+        String target = args[1].trim();
+        // 输入验证
+        if (target.isEmpty()) {
+            source.sendMessage(Component.text("玩家名不能为空", NamedTextColor.RED));
+            return;
+        }
+        if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
+            source.sendMessage(Component.text("无效的玩家名格式", NamedTextColor.RED));
+            return;
+        }
+
+        String result = banManager.unbanPlayer(target);
+        if (result != null) {
+            // 解封失败，显示错误信息
+            source.sendMessage(Component.text(result, NamedTextColor.RED));
+        } else {
+            // 解封成功
+            source.sendMessage(Component.text("已解封玩家: " + target, NamedTextColor.GREEN));
+        }
     }
 
     private void handleKickCommand(String[] args, CommandSource source) {
@@ -83,12 +119,17 @@ public class BanToolsCommand implements SimpleCommand {
     private void sendHelpMessage(CommandSource source) {
         source.sendMessage(Component.text("BanTools 使用说明", NamedTextColor.YELLOW));
         sendBanUsage(source);
+        sendUnbanUsage(source);
         sendKickUsage(source);
         source.sendMessage(Component.text("/bt reload - 重新加载配置", NamedTextColor.GOLD));
     }
 
     private void sendBanUsage(CommandSource source) {
         source.sendMessage(Component.text("封禁用法: /bt ban <玩家> [原因] [时长]", NamedTextColor.RED));
+    }
+
+    private void sendUnbanUsage(CommandSource source) {
+        source.sendMessage(Component.text("解封用法: /bt unban <玩家>", NamedTextColor.RED));
     }
 
     private void sendKickUsage(CommandSource source) {
@@ -107,6 +148,8 @@ public class BanToolsCommand implements SimpleCommand {
         switch (args[0].toLowerCase()) {
             case "ban":
                 return invocation.source().hasPermission("bantools.command.ban");
+            case "unban":
+                return invocation.source().hasPermission("bantools.command.unban");
             case "kick":
                 return invocation.source().hasPermission("bantools.command.kick");
             case "reload":

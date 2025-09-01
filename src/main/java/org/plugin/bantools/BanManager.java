@@ -25,7 +25,9 @@ public class BanManager {
 
     public void loadBans() {
         banEntries.clear();
-        configManager.getBans().forEach((key, entry) -> {
+        Map<String, BanEntry> allBans = configManager.getBans();
+
+        allBans.forEach((key, entry) -> {
             if (entry.getState() && !isExpired(entry)) {
                 banEntries.put(key, entry);
             }
@@ -77,15 +79,23 @@ public class BanManager {
         }
     }
 
-    public void banPlayer(String target, String reason, String duration) {
+    public String banPlayer(String target, String reason, String duration) {
         // 输入验证
         if (target == null || target.trim().isEmpty()) {
             logger.warn("尝试封禁空的玩家名");
-            return;
+            return "玩家名不能为空";
         }
         if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
             logger.warn("无效的玩家名格式: " + target);
-            return;
+            return "无效的玩家名格式";
+        }
+
+        // 检查是否已经被封禁
+        BanEntry existingBan = findExistingBan(target);
+        if (existingBan != null) {
+            String banInfo = formatExistingBanInfo(existingBan);
+            logger.info("尝试重复封禁玩家: " + target + "，已存在封禁记录");
+            return "该玩家已被封禁！" + banInfo;
         }
 
         Player player = server.getPlayer(target).orElse(null);
@@ -102,18 +112,21 @@ public class BanManager {
             logger.info("封禁离线玩家: " + target + "，UUID和IP将在玩家下次登录时更新");
         }
         entry.setReason(reason == null || reason.trim().isEmpty() ? configManager.getDefaultBanReason() : reason.trim());
+        entry.setStartTime(System.currentTimeMillis());
+        entry.setState(true); // 确保封禁状态为激活
 
         // 处理封禁时间（默认永久）
         if (duration == null || duration.isEmpty() || duration.equalsIgnoreCase("permanent")) {
             entry.setEndTime(null); // 永久封禁
         } else {
-            entry.setStartTime(System.currentTimeMillis());
             entry.setEndTime(parseDuration(duration));
         }
 
         configManager.addBan(entry);
+        // ConfigManager.addBan() 已经调用了 loadBans()，这里调用 loadBans() 来同步 BanManager 的数据
         loadBans();
         kickPlayer(target, entry.getReason());
+        return null; // 成功封禁，返回null表示没有错误
     }
 
     private long parseDuration(String duration) {
@@ -150,9 +163,35 @@ public class BanManager {
         }
     }
 
-    public void unbanPlayer(String target) {
+    public String unbanPlayer(String target) {
+        // 输入验证
+        if (target == null || target.trim().isEmpty()) {
+            logger.warn("尝试解封空的玩家名");
+            return "玩家名不能为空";
+        }
+        if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
+            logger.warn("无效的玩家名格式: " + target);
+            return "无效的玩家名格式";
+        }
+
+        // 检查是否存在有效的封禁记录
+        BanEntry existingBan = findExistingBan(target);
+        if (existingBan == null) {
+            // 检查是否存在已解封的记录
+            BanEntry inactiveBan = findInactiveBan(target);
+            if (inactiveBan != null) {
+                logger.info("尝试重复解封玩家: " + target + "，该玩家已处于解封状态");
+                return "该玩家未被封禁或已被解封！";
+            } else {
+                logger.info("尝试解封不存在的玩家: " + target);
+                return "该玩家没有封禁记录！";
+            }
+        }
+
         configManager.setBanState(target, false);
         loadBans();
+        logger.info("成功解封玩家: " + target);
+        return null; // 成功解封，返回null表示没有错误
     }
 
     public void kickPlayer(String target, String reason) {
@@ -175,5 +214,62 @@ public class BanManager {
 
     private boolean isExpired(BanEntry entry) {
         return !entry.isPermanent() && entry.getEndTime() < System.currentTimeMillis();
+    }
+
+    /**
+     * 查找指定玩家的现有封禁记录
+     * @param target 玩家名
+     * @return 如果找到有效的封禁记录则返回BanEntry，否则返回null
+     */
+    private BanEntry findExistingBan(String target) {
+        // 首先检查内存中的活跃封禁记录
+        for (BanEntry entry : banEntries.values()) {
+            if (entry.getName().equalsIgnoreCase(target) && !isExpired(entry)) {
+                return entry;
+            }
+        }
+
+        // 检查配置文件中的所有封禁记录（包括已解封的）
+        Map<String, BanEntry> allBans = configManager.getBans();
+        for (BanEntry entry : allBans.values()) {
+            if (entry.getName().equalsIgnoreCase(target) && entry.getState() && !isExpired(entry)) {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 查找指定玩家的已解封记录
+     * @param target 玩家名
+     * @return 如果找到已解封的记录则返回BanEntry，否则返回null
+     */
+    private BanEntry findInactiveBan(String target) {
+        Map<String, BanEntry> allBans = configManager.getBans();
+        for (BanEntry entry : allBans.values()) {
+            if (entry.getName().equalsIgnoreCase(target) && !entry.getState()) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 格式化现有封禁信息为用户友好的字符串
+     * @param banEntry 封禁记录
+     * @return 格式化的封禁信息字符串
+     */
+    private String formatExistingBanInfo(BanEntry banEntry) {
+        StringBuilder info = new StringBuilder();
+        info.append("理由：").append(banEntry.getReason());
+
+        if (banEntry.isPermanent()) {
+            info.append("，时长：永久封禁");
+        } else {
+            info.append("，时长：至 ").append(banEntry.getEndTimeFormatted());
+        }
+
+        return info.toString();
     }
 }
