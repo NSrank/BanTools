@@ -4,12 +4,14 @@ import com.typesafe.config.*;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ConfigManager {
     private Config config;
     private final File configFile;
     private final Map<String, BanEntry> bans = new HashMap<>();
+    private final Map<String, FakeBanEntry> fakeBans = new HashMap<>();
 
     public ConfigManager() {
         configFile = new File("plugins/BanTools/config.conf");
@@ -23,6 +25,7 @@ public class ConfigManager {
         try {
             config = ConfigFactory.parseFile(configFile);
             loadBans();
+            loadFakeBans();
         } catch (Exception e) {
             System.err.println("配置文件解析失败，尝试修复...");
             e.printStackTrace();
@@ -36,9 +39,23 @@ public class ConfigManager {
         String defaultConfig = "defaults {\n" +
                 "  ban_reason = \"违反服务器规则\"\n" +
                 "  kick_reason = \"管理员强制踢出\"\n" +
+                "  fakeban_reason = \"暂时踢出，请稍后重试\"\n" +
                 "}\n" +
                 "\n" +
-                "bans = {}";
+                "fakeban {\n" +
+                "  duration_minutes = 30\n" +
+                "  confirmation_message = \"此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请再次输入指令\"\n" +
+                "  confirmation_timeout_minutes = 3\n" +
+                "}\n" +
+                "\n" +
+                "whitelist {\n" +
+                "  enabled = true\n" +
+                "  players = [\"Admin\", \"Owner\"]\n" +
+                "  protection_message = \"该玩家受到白名单保护，无法执行此操作！\"\n" +
+                "}\n" +
+                "\n" +
+                "bans = {}\n" +
+                "fakebans = {}";
         try {
             java.nio.file.Files.write(configFile.toPath(), defaultConfig.getBytes("UTF-8"));
         } catch (Exception e) {
@@ -70,12 +87,44 @@ public class ConfigManager {
         return new HashMap<>(bans);
     }
 
+    public Map<String, FakeBanEntry> getFakeBans() {
+        return new HashMap<>(fakeBans);
+    }
+
     public String getDefaultBanReason() {
         return config.getString("defaults.ban_reason");
     }
 
     public String getDefaultKickReason() {
         return config.getString("defaults.kick_reason");
+    }
+
+    public String getDefaultFakeBanReason() {
+        return config.getString("defaults.fakeban_reason");
+    }
+
+    public int getFakeBanDurationMinutes() {
+        return config.getInt("fakeban.duration_minutes");
+    }
+
+    public String getFakeBanConfirmationMessage() {
+        return config.getString("fakeban.confirmation_message");
+    }
+
+    public int getFakeBanConfirmationTimeoutMinutes() {
+        return config.getInt("fakeban.confirmation_timeout_minutes");
+    }
+
+    public boolean isWhitelistEnabled() {
+        return config.getBoolean("whitelist.enabled");
+    }
+
+    public List<String> getWhitelistPlayers() {
+        return config.getStringList("whitelist.players");
+    }
+
+    public String getWhitelistProtectionMessage() {
+        return config.getString("whitelist.protection_message");
     }
 
     public void addBan(BanEntry entry) {
@@ -279,6 +328,128 @@ public class ConfigManager {
         } catch (Exception e) {
             System.err.println("修复扁平化配置失败: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载临时封禁数据
+     */
+    public void loadFakeBans() {
+        fakeBans.clear();
+        try {
+            if (!config.hasPath("fakebans")) {
+                return;
+            }
+
+            ConfigObject fakeBansObject = config.getObject("fakebans");
+            for (Map.Entry<String, ConfigValue> entry : fakeBansObject.entrySet()) {
+                String playerName = entry.getKey();
+                try {
+                    ConfigObject playerObject = (ConfigObject) entry.getValue();
+
+                    FakeBanEntry fakeBanEntry = new FakeBanEntry();
+                    fakeBanEntry.setName(playerName);
+
+                    // 处理可能为空的 UUID 和 IP
+                    ConfigValue uuidValue = playerObject.get("uuid");
+                    if (uuidValue != null && uuidValue.valueType() != ConfigValueType.NULL) {
+                        fakeBanEntry.setUuid((String) uuidValue.unwrapped());
+                    }
+
+                    ConfigValue ipValue = playerObject.get("ip");
+                    if (ipValue != null && ipValue.valueType() != ConfigValueType.NULL) {
+                        fakeBanEntry.setIp((String) ipValue.unwrapped());
+                    }
+
+                    ConfigValue reasonValue = playerObject.get("reason");
+                    if (reasonValue != null && reasonValue.valueType() == ConfigValueType.STRING) {
+                        fakeBanEntry.setReason((String) reasonValue.unwrapped());
+                    }
+
+                    ConfigValue startTimeValue = playerObject.get("start_time");
+                    if (startTimeValue != null && startTimeValue.valueType() == ConfigValueType.NUMBER) {
+                        fakeBanEntry.setStartTime(((Number) startTimeValue.unwrapped()).longValue());
+                    }
+
+                    ConfigValue endTimeValue = playerObject.get("end_time");
+                    if (endTimeValue != null && endTimeValue.valueType() == ConfigValueType.NUMBER) {
+                        fakeBanEntry.setEndTime(((Number) endTimeValue.unwrapped()).longValue());
+                    }
+
+                    ConfigValue stateValue = playerObject.get("state");
+                    if (stateValue != null && stateValue.valueType() == ConfigValueType.BOOLEAN) {
+                        fakeBanEntry.setState((Boolean) stateValue.unwrapped());
+                    }
+
+                    // 只加载有效且未过期的临时封禁
+                    if (fakeBanEntry.getState() && !fakeBanEntry.isExpired()) {
+                        fakeBans.put(playerName, fakeBanEntry);
+                    }
+
+                } catch (Exception e) {
+                    System.err.println("Error loading fakeban data for player '" + playerName + "': " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading fakebans configuration: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 添加临时封禁记录
+     */
+    public void addFakeBan(FakeBanEntry entry) {
+        Config updatedConfig = config.withValue("fakebans." + entry.getName(),
+                ConfigValueFactory.fromMap(fakeBanEntryToMap(entry)));
+        saveConfig(updatedConfig);
+        loadFakeBans();
+    }
+
+    /**
+     * 设置临时封禁状态
+     */
+    public void setFakeBanState(String playerName, boolean state) {
+        if (config.hasPath("fakebans." + playerName)) {
+            Config updatedConfig = config.withValue("fakebans." + playerName + ".state",
+                    ConfigValueFactory.fromAnyRef(state));
+            saveConfig(updatedConfig);
+            loadFakeBans();
+        }
+    }
+
+    /**
+     * 将FakeBanEntry转换为Map
+     */
+    private Map<String, Object> fakeBanEntryToMap(FakeBanEntry entry) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("name", entry.getName());
+        map.put("uuid", entry.getUuid());
+        map.put("ip", entry.getIp());
+        map.put("reason", entry.getReason());
+        map.put("start_time", entry.getStartTime());
+        map.put("end_time", entry.getEndTime());
+        map.put("state", entry.getState());
+        return map;
+    }
+
+    /**
+     * 清理过期的临时封禁记录
+     */
+    public void cleanupExpiredFakeBans() {
+        boolean hasChanges = false;
+        Config updatedConfig = config;
+
+        for (Map.Entry<String, FakeBanEntry> entry : new HashMap<>(fakeBans).entrySet()) {
+            if (entry.getValue().isExpired()) {
+                updatedConfig = updatedConfig.withValue("fakebans." + entry.getKey() + ".state",
+                        ConfigValueFactory.fromAnyRef(false));
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges) {
+            saveConfig(updatedConfig);
+            loadFakeBans();
         }
     }
 }

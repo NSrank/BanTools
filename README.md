@@ -27,6 +27,19 @@
 - **重复解封检查**：
     - 自动检查玩家是否已被解封或未被封禁，防止重复解封操作。
     - 提供清晰的状态提示信息。
+- **临时封禁系统（FakeBan）**：
+    - 支持临时封禁功能，可设置自动过期时间。
+    - 二次确认机制，防止误操作。
+    - 独立的临时封禁管理，不影响普通封禁系统。
+- **白名单保护系统**：
+    - 保护指定玩家免受封禁、踢出和临时封禁。
+    - 可配置的白名单功能，防止管理员被恶意封禁。
+    - 支持动态开关和自定义保护消息。
+- **智能Tab补全**：
+    - 支持所有命令的智能补全，根据权限显示可用命令。
+    - 玩家名自动补全，过滤白名单保护的玩家。
+    - 常用原因和时长的快速补全选项。
+    - 被封禁玩家列表补全，提高解封效率。
 - **自动解封机制**：
     - 如果指定了封禁时长，到达封禁结束时间后会自动解除封禁。
 - **多条件匹配**：
@@ -53,11 +66,26 @@
 ### 3. 启动服务器
 启动 Velocity 服务端，插件会自动生成默认配置文件 `plugins/BanTools/config.conf`。
 
-## 配置文件（`config.conf`）
-```
+## 📝 配置文件
+
+### 主配置文件（`config.conf`）
+```hocon
 defaults {
   ban_reason = "违反服务器规则"
   kick_reason = "管理员强制踢出"
+  fakeban_reason = "暂时踢出，请稍后重试"
+}
+
+fakeban {
+  duration_minutes = 30
+  confirmation_message = "此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请输入指令"
+  confirmation_timeout_minutes = 3
+}
+
+whitelist {
+  enabled = true
+  players = ["Admin", "Owner"]
+  protection_message = "该玩家受到白名单保护，无法执行此操作！"
 }
 
 bans {
@@ -80,7 +108,36 @@ bans {
     state: true     # 封禁状态（true：生效，false：解除）
   }
 }
+
+fakebans {
+  "TempBannedPlayer": {
+    name: "TempBannedPlayer"
+    uuid: "123e4567-e89b-12d3-a456-426614174000"
+    ip: "192.168.1.200"
+    reason: "挂机行为"
+    start_time: 1698765432
+    end_time: 1698767232   # 30分钟后自动解封
+    state: true            # 临时封禁状态
+  }
+}
 ```
+
+### 配置说明
+
+**defaults 节**：
+- `ban_reason`：默认封禁原因
+- `kick_reason`：默认踢出原因
+- `fakeban_reason`：默认临时封禁原因
+
+**fakeban 节**：
+- `duration_minutes`：临时封禁持续时间（分钟）
+- `confirmation_message`：二次确认提示消息
+- `confirmation_timeout_minutes`：确认超时时间（分钟）
+
+**whitelist 节**：
+- `enabled`：白名单功能开关
+- `players`：受保护的玩家列表
+- `protection_message`：保护提示消息
 - `defaults.ban_reason`：默认封禁原因。
 - `defaults.kick_reason`：默认踢出原因。
 - `bans`：存储所有封禁记录，每个条目包含以下字段：
@@ -96,7 +153,47 @@ bans {
 
 ## 🔧 版本更新日志
 
-### v1.3.2 (最新版本)
+### v1.4.0 (最新版本)  
+**重大新功能：**
+- 🆕 **临时封禁系统（FakeBan）**：全新的临时封禁功能，支持自动过期和二次确认机制  
+- 🆕 **白名单保护系统**：保护指定玩家免受封禁、踢出和临时封禁，防止管理员被恶意封禁  
+- 🆕 **智能Tab补全**：全面的命令补全支持，提高操作效率和准确性  
+- 🆕 **二次确认机制**：fakeban操作需要在指定时间内再次执行相同命令才能生效  
+- 🆕 **自动过期清理**：临时封禁到期后自动解除，无需手动干预  
+
+**用户体验改进：**  
+- 🆕 **智能Tab补全系统**：全面的命令补全支持，大幅提高操作效率  
+- 🆕 **权限感知补全**：根据用户权限智能显示可用命令  
+- 🆕 **智能玩家过滤**：自动排除白名单保护的玩家，避免误操作  
+- 🆕 **常用选项快速补全**：封禁原因、时长等常用参数的快速选择  
+- 🆕 **状态感知补全**：unban显示被封禁玩家，unfakeban显示被临时封禁玩家  
+
+**新增命令：**  
+- `/bantools fakeban <玩家> [原因]` - 临时封禁玩家（需二次确认）  
+- `/bantools unfakeban <玩家>` - 解除临时封禁  
+
+**用户体验改进：**  
+- 智能Tab补全：根据权限显示可用命令，自动补全玩家名和常用参数  
+- 玩家名过滤：Tab补全时自动排除白名单保护的玩家  
+- 常用选项：提供常用封禁原因和时长的快速选择  
+- 状态感知：unban和unfakeban命令只显示相应状态的玩家    
+
+**配置增强：**  
+- 统一配置文件：所有配置集中在主配置文件中，包括白名单设置  
+- 新增 `fakeban` 配置节，支持自定义临时封禁时长和确认消息  
+- 支持自定义临时封禁默认原因和确认超时时间  
+
+**技术改进：**  
+- 优化了命令处理架构，支持动态补全  
+- 改进了玩家列表获取机制  
+- 增强了配置文件统一管理  
+
+**安全改进：**  
+- 所有操作（ban、kick、fakeban）都支持白名单保护  
+- 防止权限泄露导致的管理员被恶意封禁  
+- 临时封禁与普通封禁完全独立，互不影响  
+
+### v1.3.2
 **重要改进：**
 - ✅ **解封命令重构**：将独立的 `/unban` 命令整合到 `/bantools unban` 或 `/bt unban` 中，避免与其他插件冲突
 - ✅ **修复数据同步问题**：封禁和解封操作后自动刷新内存数据，无需重启服务器
@@ -152,6 +249,8 @@ bans {
 | `/bantools reload`                    | `/bt reload` | `bantools.command.reload` | 重新加载插件配置文件。   |
 | `/bantools ban <玩家> [原因] [时长]`      | `/bt ban <玩家> [原因] [时长]` | `bantools.command.ban`    | 封禁指定玩家。       |
 | `/bantools unban <玩家>`              | `/bt unban <玩家>` | `bantools.command.unban`  | 解除指定玩家的封禁状态。  |
+| `/bantools fakeban <玩家> [原因]`       | `/bt fakeban <玩家> [原因]` | `bantools.command.fakeban` | 临时封禁指定玩家（需二次确认）。 |
+| `/bantools unfakeban <玩家>`          | `/bt unfakeban <玩家>` | `bantools.command.unfakeban` | 解除指定玩家的临时封禁。 |
 | `/bantools kick <玩家> [原因]`          | `/bt kick <玩家> [原因]` | `bantools.command.kick`   | 踢出指定玩家。       |
 
 ### 示例
@@ -163,7 +262,21 @@ bans {
 5. 解封用户名为 `Steve` 的玩家：`/bt unban Steve`
 6. 尝试重复解封已解封的玩家：`/bt unban Steve`
    - 系统提示：`该玩家未被封禁或已被解封！`
-7. 踢出用户名为 `Steve` 的玩家：`/bt kick Steve 违反规则`
+7. 临时封禁玩家（第一次执行）：`/bt fakeban Alice 挂机行为`
+   - 系统提示：`此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请输入指令`
+8. 确认临时封禁（3分钟内再次执行相同命令）：`/bt fakeban Alice 挂机行为`
+   - 系统提示：`成功临时封禁玩家: Alice，时长: 30分钟`
+9. 解除临时封禁：`/bt unfakeban Alice`
+   - 系统提示：`成功解除临时封禁: Alice`
+10. 踢出用户名为 `Steve` 的玩家：`/bt kick Steve 违反规则`
+
+### Tab补全演示
+- 输入 `/bt ` 然后按Tab键：显示所有可用命令（根据权限过滤）
+- 输入 `/bt ban ` 然后按Tab键：显示在线玩家列表（排除白名单玩家）
+- 输入 `/bt ban PlayerName ` 然后按Tab键：显示常用封禁原因
+- 输入 `/bt ban PlayerName 作弊行为 ` 然后按Tab键：显示时长选项（1h, 6h, 1d, 7d等）
+- 输入 `/bt unban ` 然后按Tab键：显示被封禁的玩家列表
+- 输入 `/bt unfakeban ` 然后按Tab键：显示被临时封禁的玩家列表
 
 ---
 

@@ -9,18 +9,49 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class BanManager {
     private final ProxyServer server;
     private final Logger logger;
     private final ConfigManager configManager;
+    private final WhitelistManager whitelistManager;
+    private FakeBanManager fakeBanManager; // 延迟初始化，避免循环依赖
     private final Map<String, BanEntry> banEntries = new HashMap<>();
 
-    public BanManager(ProxyServer server, Logger logger, ConfigManager configManager) {
+    public BanManager(ProxyServer server, Logger logger, ConfigManager configManager,
+                     WhitelistManager whitelistManager) {
         this.server = server;
         this.logger = logger;
         this.configManager = configManager;
+        this.whitelistManager = whitelistManager;
         loadBans();
+    }
+
+    /**
+     * 设置FakeBanManager（延迟初始化）
+     */
+    public void setFakeBanManager(FakeBanManager fakeBanManager) {
+        this.fakeBanManager = fakeBanManager;
+    }
+
+    /**
+     * 获取所有被封禁的玩家名列表
+     */
+    public List<String> getBannedPlayers() {
+        return banEntries.values().stream()
+                .filter(entry -> entry.getState() && !isExpired(entry))
+                .map(BanEntry::getName)
+                .collect(Collectors.toList());
+    }
+
+
+
+    /**
+     * 检查玩家是否在白名单中
+     */
+    public boolean isWhitelisted(String playerName) {
+        return whitelistManager.isWhitelisted(playerName);
     }
 
     public void loadBans() {
@@ -36,7 +67,8 @@ public class BanManager {
     }
 
     public boolean isBanned(String uuid, String ip, String username) {
-        return banEntries.values().stream()
+        // 检查普通封禁
+        boolean normalBan = banEntries.values().stream()
                 .filter(entry -> !isExpired(entry))
                 .anyMatch(entry -> {
                     // 优先检查玩家名（最可靠的标识符）
@@ -52,6 +84,11 @@ public class BanManager {
                     return (entry.getUuid() != null && entry.getUuid().equals(uuid)) ||
                            (entry.getIp() != null && entry.getIp().equals(ip));
                 });
+
+        // 检查临时封禁
+        boolean fakeBan = fakeBanManager != null && fakeBanManager.isFakeBanned(uuid, ip, username);
+
+        return normalBan || fakeBan;
     }
 
     private void updateBanEntryInfo(BanEntry entry, String uuid, String ip) {
@@ -66,17 +103,30 @@ public class BanManager {
     }
 
     public String getBanMessage(String uuid, String ip, String username) {
+        // 检查普通封禁
         BanEntry entry = findBanEntry(uuid, ip, username);
-        if (entry == null) return "";
-
-        String reason = entry.getReason();
-        if (entry.isPermanent()) {
-            return "§c你已被永久封禁！\n原因：" + reason;
-        } else {
-            return String.format("§c你已被封禁至 %s\n原因：%s",
-                    entry.getEndTimeFormatted(),
-                    reason);
+        if (entry != null) {
+            String reason = entry.getReason();
+            if (entry.isPermanent()) {
+                return "§c你已被永久封禁！\n原因：" + reason;
+            } else {
+                return String.format("§c你已被封禁至 %s\n原因：%s",
+                        entry.getEndTimeFormatted(),
+                        reason);
+            }
         }
+
+        // 检查临时封禁
+        if (fakeBanManager != null) {
+            FakeBanEntry fakeBanEntry = fakeBanManager.getFakeBanInfo(uuid, ip, username);
+            if (fakeBanEntry != null) {
+                return String.format("§c你已被临时封禁！\n原因：%s\n剩余时间：%s",
+                        fakeBanEntry.getReason(),
+                        fakeBanEntry.getRemainingTimeFormatted());
+            }
+        }
+
+        return "";
     }
 
     public String banPlayer(String target, String reason, String duration) {
@@ -88,6 +138,13 @@ public class BanManager {
         if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
             logger.warn("无效的玩家名格式: " + target);
             return "无效的玩家名格式";
+        }
+
+        // 白名单保护检查
+        String protectionCheck = whitelistManager.checkProtection(target);
+        if (protectionCheck != null) {
+            logger.warn("尝试封禁受保护的玩家: " + target);
+            return protectionCheck;
         }
 
         // 检查是否已经被封禁
@@ -194,10 +251,30 @@ public class BanManager {
         return null; // 成功解封，返回null表示没有错误
     }
 
-    public void kickPlayer(String target, String reason) {
+    public String kickPlayer(String target, String reason) {
+        // 输入验证
+        if (target == null || target.trim().isEmpty()) {
+            logger.warn("尝试踢出空的玩家名");
+            return "玩家名不能为空";
+        }
+        if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
+            logger.warn("无效的玩家名格式: " + target);
+            return "无效的玩家名格式";
+        }
+
+        // 白名单保护检查
+        String protectionCheck = whitelistManager.checkProtection(target);
+        if (protectionCheck != null) {
+            logger.warn("尝试踢出受保护的玩家: " + target);
+            return protectionCheck;
+        }
+
         server.getAllPlayers().stream()
                 .filter(p -> p.getUsername().equalsIgnoreCase(target))
                 .forEach(p -> p.disconnect(Component.text("§c" + reason)));
+
+        logger.info("已踢出玩家: " + target + "，原因: " + reason);
+        return null; // 成功踢出，返回null表示没有错误
     }
 
     private BanEntry findBanEntry(String uuid, String ip, String username) {
