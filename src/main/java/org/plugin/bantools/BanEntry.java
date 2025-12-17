@@ -37,7 +37,7 @@ public class BanEntry {
 
     public boolean isPermanent() { return endTime == null; }
     public String getEndTimeFormatted() {
-        if (isPermanent()) return "永久封禁";
+        if (isPermanent()) return "Permanently banned";
         return DateTimeFormatter.ofPattern("yyyy/MM/dd")
                 .format(Instant.ofEpochMilli(endTime));
     }

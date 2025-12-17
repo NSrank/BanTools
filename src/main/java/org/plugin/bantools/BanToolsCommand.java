@@ -52,7 +52,7 @@ public class BanToolsCommand implements SimpleCommand {
                 break;
             case "reload":
                 banManager.loadBans();
-                source.sendMessage(Component.text("配置已重新加载", NamedTextColor.GREEN));
+                source.sendMessage(Component.text("Configuration reloaded", NamedTextColor.GREEN));
                 break;
             default:
                 sendHelpMessage(source);
@@ -78,11 +78,11 @@ public class BanToolsCommand implements SimpleCommand {
 
         String result = banManager.banPlayer(target, reason, duration);
         if (result != null) {
-            // 封禁失败，显示错误信息
+            // Ban failed, show error message
             source.sendMessage(Component.text(result, NamedTextColor.RED));
         } else {
-            // 封禁成功
-            source.sendMessage(Component.text("成功封禁玩家: " + target, NamedTextColor.GREEN));
+            // Ban succeeded
+            source.sendMessage(Component.text("Successfully banned player: " + target, NamedTextColor.GREEN));
         }
     }
 
@@ -93,23 +93,23 @@ public class BanToolsCommand implements SimpleCommand {
         }
 
         String target = args[1].trim();
-        // 输入验证
+        // Input validation
         if (target.isEmpty()) {
-            source.sendMessage(Component.text("玩家名不能为空", NamedTextColor.RED));
+            source.sendMessage(Component.text("Player name cannot be empty", NamedTextColor.RED));
             return;
         }
         if (target.length() > 16 || !target.matches("^[a-zA-Z0-9_]{1,16}$")) {
-            source.sendMessage(Component.text("无效的玩家名格式", NamedTextColor.RED));
+            source.sendMessage(Component.text("Invalid player name format", NamedTextColor.RED));
             return;
         }
 
         String result = banManager.unbanPlayer(target);
         if (result != null) {
-            // 解封失败，显示错误信息
+            // Unban failed, show error message
             source.sendMessage(Component.text(result, NamedTextColor.RED));
         } else {
-            // 解封成功
-            source.sendMessage(Component.text("已解封玩家: " + target, NamedTextColor.GREEN));
+            // Unban successful
+            source.sendMessage(Component.text("Player unbanned: " + target, NamedTextColor.GREEN));
         }
     }
 
@@ -125,7 +125,7 @@ public class BanToolsCommand implements SimpleCommand {
             reason = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
         }
 
-        // 获取管理员名称
+        // Get administrator name
         String adminName = source instanceof Player ? ((Player) source).getUsername() : "Console";
 
         String result = fakeBanManager.confirmFakeBan(adminName, target, reason);
@@ -143,7 +143,7 @@ public class BanToolsCommand implements SimpleCommand {
         String target = args[1].trim();
         String result = fakeBanManager.unFakeBan(target);
         if (result != null) {
-            if (result.startsWith("成功")) {
+            if (result.startsWith("Successfully") || result.startsWith("Success")) {
                 source.sendMessage(Component.text(result, NamedTextColor.GREEN));
             } else {
                 source.sendMessage(Component.text(result, NamedTextColor.RED));
@@ -166,42 +166,42 @@ public class BanToolsCommand implements SimpleCommand {
 
         String result = banManager.kickPlayer(target, reason);
         if (result != null) {
-            // 踢出失败，显示错误信息
+            // Kick failed, show error message
             source.sendMessage(Component.text(result, NamedTextColor.RED));
         } else {
-            // 踢出成功
-            source.sendMessage(Component.text("已踢出玩家: " + target, NamedTextColor.GREEN));
+            // Kick succeeded
+            source.sendMessage(Component.text("Successfully kicked player: " + target, NamedTextColor.GREEN));
         }
     }
 
     private void sendHelpMessage(CommandSource source) {
-        source.sendMessage(Component.text("BanTools 使用说明", NamedTextColor.YELLOW));
+        source.sendMessage(Component.text("BanTools Usage", NamedTextColor.YELLOW));
         sendBanUsage(source);
         sendUnbanUsage(source);
         sendFakeBanUsage(source);
         sendUnFakeBanUsage(source);
         sendKickUsage(source);
-        source.sendMessage(Component.text("/bt reload - 重新加载配置", NamedTextColor.GOLD));
+        source.sendMessage(Component.text("/bt reload - Reload configuration", NamedTextColor.GOLD));
     }
 
     private void sendBanUsage(CommandSource source) {
-        source.sendMessage(Component.text("封禁用法: /bt ban <玩家> [原因] [时长]", NamedTextColor.RED));
+        source.sendMessage(Component.text("Ban usage: /bt ban <player> [reason] [duration]", NamedTextColor.RED));
     }
 
     private void sendUnbanUsage(CommandSource source) {
-        source.sendMessage(Component.text("解封用法: /bt unban <玩家>", NamedTextColor.RED));
+        source.sendMessage(Component.text("Unban usage: /bt unban <player>", NamedTextColor.RED));
     }
 
     private void sendFakeBanUsage(CommandSource source) {
-        source.sendMessage(Component.text("临时封禁用法: /bt fakeban <玩家> [原因]", NamedTextColor.RED));
+        source.sendMessage(Component.text("Temporary ban usage: /bt fakeban <player> [reason]", NamedTextColor.RED));
     }
 
     private void sendUnFakeBanUsage(CommandSource source) {
-        source.sendMessage(Component.text("解除临时封禁用法: /bt unfakeban <玩家>", NamedTextColor.RED));
+        source.sendMessage(Component.text("Remove temporary ban usage: /bt unfakeban <player>", NamedTextColor.RED));
     }
 
     private void sendKickUsage(CommandSource source) {
-        source.sendMessage(Component.text("踢出用法: /bt kick <玩家> [原因]", NamedTextColor.RED));
+        source.sendMessage(Component.text("Kick usage: /bt kick <player> [reason]", NamedTextColor.RED));
     }
 
     @Override
@@ -236,12 +236,12 @@ public class BanToolsCommand implements SimpleCommand {
         String[] args = invocation.arguments();
         CommandSource source = invocation.source();
 
-        // 如果没有参数，返回所有可用的子命令
+        // If no parameters, return all available subcommands
         if (args.length <= 1) {
             List<String> suggestions = new ArrayList<>();
             String input = args.length == 0 ? "" : args[0].toLowerCase();
 
-            // 根据权限添加可用命令
+            // Add available commands based on permissions
             if (source.hasPermission("bantools.command.ban") && "ban".startsWith(input)) {
                 suggestions.add("ban");
             }
@@ -264,7 +264,7 @@ public class BanToolsCommand implements SimpleCommand {
             return suggestions;
         }
 
-        // 根据子命令提供参数补全
+        // Provide parameter completion based on subcommand
         String subCommand = args[0].toLowerCase();
         switch (subCommand) {
             case "ban":
@@ -281,29 +281,29 @@ public class BanToolsCommand implements SimpleCommand {
     }
 
     /**
-     * 为ban/fakeban/kick命令提供玩家名补全
+     * Provide player name completions for ban/fakeban/kick commands
      */
     private List<String> suggestPlayersForBan(String[] args) {
         if (args.length == 2) {
-            // 第二个参数：玩家名
+            // Second parameter: player name
             String input = args[1].toLowerCase();
             return server.getAllPlayers().stream()
                     .map(Player::getUsername)
                     .filter(name -> name.toLowerCase().startsWith(input))
-                    .filter(name -> !banManager.isWhitelisted(name)) // 过滤白名单玩家
+                    .filter(name -> !banManager.isWhitelisted(name)) // filter whitelist players
                     .collect(Collectors.toList());
         } else if (args.length == 3) {
-            // 第三个参数：原因提示
-            return Arrays.asList("违反服务器规则", "作弊行为", "恶意破坏", "挂机行为", "不当言论");
+            // Third parameter: reason suggestions
+            return Arrays.asList("Violation of server rules", "Cheating", "Griefing", "AFK", "Inappropriate language");
         } else if (args.length == 4 && "ban".equals(args[0].toLowerCase())) {
-            // 第四个参数（仅ban命令）：时长提示
-            return Arrays.asList("1h", "6h", "1d", "3d", "7d", "30d", "永久");
+            // Fourth parameter (ban only): duration suggestions
+            return Arrays.asList("1h", "6h", "1d", "3d", "7d", "30d", "permanent");
         }
         return Collections.emptyList();
     }
 
     /**
-     * 为unban命令提供被封禁玩家名补全
+     * Provide completions of banned player names for the unban command
      */
     private List<String> suggestPlayersForUnban(String[] args) {
         if (args.length == 2) {
@@ -316,7 +316,7 @@ public class BanToolsCommand implements SimpleCommand {
     }
 
     /**
-     * 为unfakeban命令提供被临时封禁玩家名补全
+     * Provide completions of temporarily banned player names for the unfakeban command
      */
     private List<String> suggestPlayersForUnfakeban(String[] args) {
         if (args.length == 2) {

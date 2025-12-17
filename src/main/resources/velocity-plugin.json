@@ -2,7 +2,7 @@
   "id": "bantools",
   "name": "BanTools",
   "version": "1.4.0",
-  "description": "Velocity封禁管理插件",
+  "description": "Velocity ban management plugin",
   "authors": ["NSrank & Qwen2.5-Max & Augment"],
   "main": "org.plugins.bantools.BanToolsPlugin",
   "dependencies": [
@@ -14,22 +14,22 @@
   "commands": {
     "bantools": {
       "aliases": ["bt"],
-      "description": "主命令用于管理封禁操作",
+      "description": "Main command for managing ban operations",
       "usage": "/<command> reload",
       "permission": "bantools.command.reload"
     },
     "ban": {
-      "description": "封禁指定玩家的UUID/IP/用户名",
+      "description": "Ban a player by UUID/IP/username",
       "usage": "/bantools ban <type> <value>",
       "permission": "bantools.command.ban"
     },
     "unban": {
-      "description": "解除对指定玩家的封禁",
+      "description": "Unban a specific player",
       "usage": "/bantools unban <player>",
       "permission": "bantools.command.unban"
     },
     "kick": {
-      "description": "踢出指定玩家",
+      "description": "Kick a specific player",
       "usage": "/bantools kick <player>",
       "permission": "bantools.command.kick"
     }

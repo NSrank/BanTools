@@ -29,30 +29,30 @@ public class BanToolsPlugin {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        // 初始化配置管理器
+        // Initialize configuration manager
         configManager = new ConfigManager();
 
-        // 初始化白名单管理器
+        // Initialize whitelist manager
         whitelistManager = new WhitelistManager(configManager, logger);
 
-        // 初始化封禁管理器
+        // Initialize ban manager
         banManager = new BanManager(server, logger, configManager, whitelistManager);
 
-        // 初始化临时封禁管理器
+        // Initialize fake ban manager
         fakeBanManager = new FakeBanManager(configManager, whitelistManager, server, logger);
 
-        // 设置循环依赖
+        // Set cyclic dependency
         banManager.setFakeBanManager(fakeBanManager);
 
-        // 注册事件监听器
+        // Register event listener
         server.getEventManager().register(this, new LoginListener(banManager));
 
-        // 注册命令
+        // Register commands
         registerCommands();
 
         logger.info("===================================");
-        logger.info("BanTools v1.4.0 已加载");
-        logger.info("作者：NSrank & Qwen2.5-Max & Augment");
+        logger.info("BanTools v1.4.0 loaded");
+        logger.info("Authors: NSrank & Qwen2.5-Max & Augment");
         logger.info("===================================");
     }
 

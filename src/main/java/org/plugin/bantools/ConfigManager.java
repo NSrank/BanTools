@@ -27,9 +27,9 @@ public class ConfigManager {
             loadBans();
             loadFakeBans();
         } catch (Exception e) {
-            System.err.println("配置文件解析失败，尝试修复...");
+            System.err.println("Configuration file parsing failed, attempting repair...");
             e.printStackTrace();
-            // 如果配置文件损坏，备份并重新创建
+            // If the configuration file is corrupted, back up and recreate it
             backupAndRecreateConfig();
         }
     }
@@ -37,21 +37,21 @@ public class ConfigManager {
     private void createDefaultConfig() {
         configFile.getParentFile().mkdirs();
         String defaultConfig = "defaults {\n" +
-                "  ban_reason = \"违反服务器规则\"\n" +
-                "  kick_reason = \"管理员强制踢出\"\n" +
-                "  fakeban_reason = \"暂时踢出，请稍后重试\"\n" +
+                "  ban_reason = \"Violation of server rules\"\n" +
+                "  kick_reason = \"Kicked by an administrator\"\n" +
+                "  fakeban_reason = \"Temporarily kicked, please try again later\"\n" +
                 "}\n" +
                 "\n" +
                 "fakeban {\n" +
                 "  duration_minutes = 30\n" +
-                "  confirmation_message = \"此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请再次输入指令\"\n" +
+                "  confirmation_message = \"This action will temporarily kick the player; they cannot rejoin for thirty minutes. Please check the surrounding area of AFK players. To confirm, re-enter the command.\"\n" +
                 "  confirmation_timeout_minutes = 3\n" +
                 "}\n" +
                 "\n" +
                 "whitelist {\n" +
                 "  enabled = true\n" +
                 "  players = [\"Admin\", \"Owner\"]\n" +
-                "  protection_message = \"该玩家受到白名单保护，无法执行此操作！\"\n" +
+                "  protection_message = \"This player is protected by the whitelist and cannot be modified!\"\n" +
                 "}\n" +
                 "\n" +
                 "bans = {}\n" +
@@ -65,20 +65,20 @@ public class ConfigManager {
 
     private void backupAndRecreateConfig() {
         try {
-            // 备份损坏的配置文件
+            // Backup corrupted configuration file
             File backupFile = new File(configFile.getParent(), "config.conf.backup." + System.currentTimeMillis());
             if (configFile.exists()) {
                 java.nio.file.Files.copy(configFile.toPath(), backupFile.toPath());
-                System.out.println("已备份损坏的配置文件到: " + backupFile.getName());
+                System.out.println("Backed up corrupted configuration file to: " + backupFile.getName());
             }
 
-            // 重新创建默认配置
+            // Recreate default configuration
             createDefaultConfig();
             config = ConfigFactory.parseFile(configFile);
             loadBans();
 
         } catch (Exception e) {
-            System.err.println("修复配置文件失败: " + e.getMessage());
+            System.err.println("Failed to repair configuration file: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -131,21 +131,21 @@ public class ConfigManager {
         Config updatedConfig = config.withValue("bans." + entry.getName(),
                 ConfigValueFactory.fromMap(entryToMap(entry)));
         saveConfig(updatedConfig);
-        loadBans(); // 重新加载封禁数据到内存
+        loadBans(); // Reload ban data into memory
     }
 
     public void setBanState(String target, boolean state) {
         Config updatedConfig = config.withValue("bans." + target + ".state",
                 ConfigValueFactory.fromAnyRef(state));
         saveConfig(updatedConfig);
-        loadBans(); // 重新加载封禁数据到内存
+        loadBans(); // Reload ban data into memory
     }
 
     public void updateBanEntry(BanEntry entry) {
         Config updatedConfig = config.withValue("bans." + entry.getName(),
                 ConfigValueFactory.fromMap(entryToMap(entry)));
         saveConfig(updatedConfig);
-        loadBans(); // 重新加载封禁数据到内存
+        loadBans(); // Reload ban data into memory
     }
 
     private Map<String, Object> entryToMap(BanEntry entry) {
@@ -162,7 +162,7 @@ public class ConfigManager {
 
     private void saveConfig(Config updatedConfig) {
         try {
-            // 使用格式化的渲染选项来保持嵌套结构
+            // Use formatted render options to preserve nested structure
             ConfigRenderOptions options = ConfigRenderOptions.defaults()
                     .setOriginComments(false)
                     .setComments(false)
@@ -176,32 +176,32 @@ public class ConfigManager {
     }
 
     private void loadBans() {
-        // 清空现有封禁列表
+        // Clear existing ban list
         bans.clear();
 
-        // 确保 "bans" 字段存在且为对象
+        // Ensure the "bans" field exists and is an object
         if (!config.hasPath("bans")) {
-            return; // 如果没有封禁数据，则直接返回
+            return; // If there are no ban records, return
         }
 
         try {
-            // 检查是否是扁平化的配置（损坏的格式）
+            // Check if the configuration is flattened (corrupted format)
             if (detectFlattenedConfig()) {
-                System.out.println("检测到扁平化的配置文件，尝试修复...");
+                System.out.println("Detected flattened configuration file, attempting to repair...");
                 fixFlattenedConfig();
                 return;
             }
 
             ConfigObject bansObject = config.getObject("bans");
             if (bansObject.isEmpty()) {
-                return; // 空的封禁列表
+                return; // Empty ban list
             }
 
             for (Map.Entry<String, ConfigValue> entry : bansObject.entrySet()) {
                 String playerName = entry.getKey();
                 ConfigValue value = entry.getValue();
 
-                // 检查 ConfigValue 是否为 ConfigObject
+                // Check whether ConfigValue is a ConfigObject
                 if (!(value instanceof ConfigObject)) {
                     System.err.println("Invalid data type for player '" + playerName + "'. Expected ConfigObject, got " + value.getClass().getSimpleName() + ". Skipping...");
                     continue;
@@ -210,11 +210,11 @@ public class ConfigManager {
                 try {
                     ConfigObject playerObject = (ConfigObject) value;
 
-                    // 创建 BanEntry 并填充数据
+                    // Create BanEntry and populate data
                     BanEntry banEntry = new BanEntry();
                     banEntry.setName(playerName);
 
-                    // 安全地获取各个字段
+                    // Safely retrieve each field
                     ConfigValue uuidValue = playerObject.get("uuid");
                     if (uuidValue != null && uuidValue.valueType() == ConfigValueType.STRING) {
                         banEntry.setUuid((String) uuidValue.unwrapped());
@@ -229,7 +229,7 @@ public class ConfigManager {
                         banEntry.setIp(null);
                     }
 
-                    // 获取必需字段
+                    // Get required fields
                     ConfigValue reasonValue = playerObject.get("reason");
                     if (reasonValue != null && reasonValue.valueType() == ConfigValueType.STRING) {
                         banEntry.setReason((String) reasonValue.unwrapped());
@@ -254,12 +254,12 @@ public class ConfigManager {
                         continue;
                     }
 
-                    // 处理可能为空的 end_time
+                    // Handle possibly null end_time
                     ConfigValue endTimeValue = playerObject.get("end_time");
                     if (endTimeValue != null && endTimeValue.valueType() == ConfigValueType.NUMBER) {
                         banEntry.setEndTime(((Number) endTimeValue.unwrapped()).longValue());
                     } else {
-                        banEntry.setEndTime(null); // 永久封禁
+                        banEntry.setEndTime(null); // Permanent ban
                     }
 
                     bans.put(playerName, banEntry);
@@ -276,7 +276,7 @@ public class ConfigManager {
     }
 
     private boolean detectFlattenedConfig() {
-        // 检查是否存在类似 "player.field" 的键，这表明配置被扁平化了
+        // Check for keys like "player.field" which indicate the config has been flattened
         for (String key : config.root().keySet()) {
             if (key.contains(".") && (key.endsWith(".name") || key.endsWith(".uuid") ||
                 key.endsWith(".ip") || key.endsWith(".reason") ||
@@ -290,7 +290,7 @@ public class ConfigManager {
 
     private void fixFlattenedConfig() {
         try {
-            // 收集所有扁平化的数据
+            // Collect all flattened data
             Map<String, Map<String, Object>> playerData = new HashMap<>();
 
             for (Map.Entry<String, ConfigValue> entry : config.root().entrySet()) {
@@ -307,32 +307,32 @@ public class ConfigManager {
                 }
             }
 
-            // 重建配置
+            // Rebuild configuration
             Map<String, Object> newConfig = new HashMap<>();
             newConfig.put("defaults", Map.of(
-                "ban_reason", "违反服务器规则",
-                "kick_reason", "管理员强制踢出"
+                "ban_reason", "Violation of server rules",
+                "kick_reason", "Kicked by an administrator"
             ));
             newConfig.put("bans", playerData);
 
-            // 保存修复后的配置
+            // Save the repaired configuration
             Config fixedConfig = ConfigFactory.parseMap(newConfig);
             saveConfig(fixedConfig);
 
-            // 重新加载
+            // Reload
             config = fixedConfig;
             loadBans();
 
-            System.out.println("配置文件修复完成，重新加载了 " + playerData.size() + " 个玩家的封禁记录");
+            System.out.println("Configuration repair completed, reloaded " + playerData.size() + " player ban records");
 
         } catch (Exception e) {
-            System.err.println("修复扁平化配置失败: " + e.getMessage());
+            System.err.println("Failed to repair flattened configuration: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     /**
-     * 加载临时封禁数据
+     * Load temporary ban data
      */
     public void loadFakeBans() {
         fakeBans.clear();
@@ -350,7 +350,7 @@ public class ConfigManager {
                     FakeBanEntry fakeBanEntry = new FakeBanEntry();
                     fakeBanEntry.setName(playerName);
 
-                    // 处理可能为空的 UUID 和 IP
+                    // Handle possibly null UUID and IP
                     ConfigValue uuidValue = playerObject.get("uuid");
                     if (uuidValue != null && uuidValue.valueType() != ConfigValueType.NULL) {
                         fakeBanEntry.setUuid((String) uuidValue.unwrapped());
@@ -381,7 +381,7 @@ public class ConfigManager {
                         fakeBanEntry.setState((Boolean) stateValue.unwrapped());
                     }
 
-                    // 只加载有效且未过期的临时封禁
+                    // Only load valid and non-expired temporary bans
                     if (fakeBanEntry.getState() && !fakeBanEntry.isExpired()) {
                         fakeBans.put(playerName, fakeBanEntry);
                     }
@@ -396,7 +396,7 @@ public class ConfigManager {
     }
 
     /**
-     * 添加临时封禁记录
+     * Add temporary ban record
      */
     public void addFakeBan(FakeBanEntry entry) {
         Config updatedConfig = config.withValue("fakebans." + entry.getName(),
@@ -406,7 +406,7 @@ public class ConfigManager {
     }
 
     /**
-     * 设置临时封禁状态
+     * Set temporary ban state
      */
     public void setFakeBanState(String playerName, boolean state) {
         if (config.hasPath("fakebans." + playerName)) {
@@ -418,7 +418,7 @@ public class ConfigManager {
     }
 
     /**
-     * 将FakeBanEntry转换为Map
+     * Convert FakeBanEntry to Map
      */
     private Map<String, Object> fakeBanEntryToMap(FakeBanEntry entry) {
         Map<String, Object> map = new HashMap<>();
@@ -433,7 +433,7 @@ public class ConfigManager {
     }
 
     /**
-     * 清理过期的临时封禁记录
+     * Clean up expired temporary ban records
      */
     public void cleanupExpiredFakeBans() {
         boolean hasChanges = false;

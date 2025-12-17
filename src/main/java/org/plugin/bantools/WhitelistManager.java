@@ -5,8 +5,8 @@ import org.slf4j.Logger;
 import java.util.*;
 
 /**
- * 白名单管理器
- * 管理受保护的玩家列表，防止管理员被恶意封禁
+ * Whitelist manager
+ * Manages the protected players list to prevent administrators from being maliciously banned
  */
 public class WhitelistManager {
     private final ConfigManager configManager;
@@ -20,13 +20,13 @@ public class WhitelistManager {
         this.configManager = configManager;
         this.logger = logger;
         this.whitelist = new HashSet<>();
-        this.protectionMessage = "该玩家受到白名单保护，无法执行此操作！";
+        this.protectionMessage = "This player is protected by the whitelist and cannot be modified!";
 
         loadWhitelist();
     }
 
     /**
-     * 加载白名单配置（从主配置文件）
+     * Load whitelist configuration (from main configuration file)
      */
     public void loadWhitelist() {
         try {
@@ -39,14 +39,14 @@ public class WhitelistManager {
                 whitelist.addAll(whitelistPlayers);
             }
 
-            logger.info("白名单配置已加载，状态: " + (enabled ? "启用" : "禁用") +
-                       "，保护玩家数量: " + whitelist.size());
+            logger.info("Whitelist configuration loaded, status: " + (enabled ? "enabled" : "disabled") +
+                       ", protected players: " + whitelist.size());
 
         } catch (Exception e) {
-            logger.error("加载白名单配置失败", e);
-            // 使用默认配置
+            logger.error("Failed to load whitelist configuration", e);
+            // Use default configuration
             enabled = true;
-            protectionMessage = "该玩家受到白名单保护，无法执行此操作！";
+            protectionMessage = "This player is protected by the whitelist and cannot be modified!";
             whitelist.clear();
             whitelist.addAll(Arrays.asList("Admin", "Owner"));
         }
@@ -55,7 +55,7 @@ public class WhitelistManager {
 
 
     /**
-     * 检查玩家是否在白名单中
+     * Check whether a player is on the whitelist
      */
     public boolean isWhitelisted(String playerName) {
         if (!enabled || playerName == null) {
@@ -65,9 +65,9 @@ public class WhitelistManager {
     }
 
     /**
-     * 检查是否可以对玩家执行操作
-     * @param playerName 玩家名
-     * @return 如果可以执行操作返回null，否则返回保护消息
+     * Check whether an operation can be performed on a player
+     * @param playerName player name
+     * @return null if operation is allowed, otherwise the protection message
      */
     public String checkProtection(String playerName) {
         if (isWhitelisted(playerName)) {
@@ -77,8 +77,8 @@ public class WhitelistManager {
     }
 
     /**
-     * 添加玩家到白名单
-     * 注意：此方法只修改内存中的白名单，需要手动编辑配置文件来永久保存
+     * Add a player to the whitelist
+     * Note: this only updates the in-memory whitelist; edit the configuration file to persist
      */
     public boolean addToWhitelist(String playerName) {
         if (playerName == null || playerName.trim().isEmpty()) {
@@ -87,19 +87,19 @@ public class WhitelistManager {
 
         boolean added = whitelist.add(playerName.trim());
         if (added) {
-            logger.info("玩家 " + playerName + " 已添加到内存白名单（需要手动编辑配置文件来永久保存）");
+            logger.info("Player " + playerName + " added to in-memory whitelist (edit configuration file to persist)");
         }
         return added;
     }
 
     /**
-     * 从白名单移除玩家
-     * 注意：此方法只修改内存中的白名单，需要手动编辑配置文件来永久保存
+     * Remove a player from the whitelist
+     * Note: this only updates the in-memory whitelist; edit the configuration file to persist
      */
     public boolean removeFromWhitelist(String playerName) {
         boolean removed = whitelist.remove(playerName);
         if (removed) {
-            logger.info("玩家 " + playerName + " 已从内存白名单移除（需要手动编辑配置文件来永久保存）");
+            logger.info("Player " + playerName + " removed from in-memory whitelist (edit configuration file to persist)");
         }
         return removed;
     }

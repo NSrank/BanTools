@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 临时封禁记录实体类
- * 用于管理fakeban功能的临时封禁数据
+ * Temporary ban record entity
+ * Used to manage temporary ban data for the fakeban feature
  */
 public class FakeBanEntry {
     private String name;
@@ -51,14 +51,14 @@ public class FakeBanEntry {
     public void setState(boolean state) { this.state = state; }
 
     /**
-     * 检查临时封禁是否已过期
+     * Check whether the temporary ban has expired
      */
     public boolean isExpired() {
         return System.currentTimeMillis() > endTime;
     }
 
     /**
-     * 获取剩余时间（分钟）
+     * Get remaining time (minutes)
      */
     public long getRemainingMinutes() {
         long remaining = endTime - System.currentTimeMillis();
@@ -66,7 +66,7 @@ public class FakeBanEntry {
     }
 
     /**
-     * 获取格式化的结束时间
+     * Get formatted end time
      */
     public String getEndTimeFormatted() {
         return DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
@@ -74,12 +74,12 @@ public class FakeBanEntry {
     }
 
     /**
-     * 获取格式化的剩余时间
+     * Get formatted remaining time
      */
     public String getRemainingTimeFormatted() {
         long remaining = endTime - System.currentTimeMillis();
         if (remaining <= 0) {
-            return "已过期";
+            return "Expired";
         }
         
         long minutes = remaining / (1000 * 60);
@@ -87,9 +87,9 @@ public class FakeBanEntry {
         minutes = minutes % 60;
         
         if (hours > 0) {
-            return String.format("%d小时%d分钟", hours, minutes);
+            return String.format("%d hours %d minutes", hours, minutes);
         } else {
-            return String.format("%d分钟", minutes);
+            return String.format("%d minutes", minutes);
         }
     }
 }
