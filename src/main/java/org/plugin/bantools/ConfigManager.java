@@ -46,6 +46,8 @@ public class ConfigManager {
                 "  duration_minutes = 30\n" +
                 "  confirmation_message = \"此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请再次输入指令\"\n" +
                 "  confirmation_timeout_minutes = 3\n" +
+                "  cleanup_interval_minutes = 1\n" +
+                "  log_loading_info = true\n" +
                 "}\n" +
                 "\n" +
                 "whitelist {\n" +
@@ -125,6 +127,14 @@ public class ConfigManager {
 
     public String getWhitelistProtectionMessage() {
         return config.getString("whitelist.protection_message");
+    }
+
+    public int getFakeBanCleanupIntervalMinutes() {
+        return config.getInt("fakeban.cleanup_interval_minutes");
+    }
+
+    public boolean isFakeBanLogLoadingInfoEnabled() {
+        return config.getBoolean("fakeban.log_loading_info");
     }
 
     public void addBan(BanEntry entry) {

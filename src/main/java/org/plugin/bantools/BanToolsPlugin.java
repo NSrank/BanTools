@@ -15,7 +15,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "bantools",
         name = "BanTools",
-        version = "1.4.0",
+        version = "1.4.2",
         description = "Advanced banning system for Velocity"
 )
 public class BanToolsPlugin {
@@ -51,7 +51,7 @@ public class BanToolsPlugin {
         registerCommands();
 
         logger.info("===================================");
-        logger.info("BanTools v1.4.0 已加载");
+        logger.info("BanTools v1.4.2 已加载");
         logger.info("作者：NSrank & Qwen2.5-Max & Augment");
         logger.info("===================================");
     }

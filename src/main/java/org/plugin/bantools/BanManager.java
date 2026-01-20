@@ -281,8 +281,8 @@ public class BanManager {
         return banEntries.values().stream()
                 .filter(entry -> !isExpired(entry))
                 .filter(entry ->
-                        entry.getUuid().equals(uuid) ||
-                                entry.getIp().equals(ip) ||
+                        (entry.getUuid() != null && entry.getUuid().equals(uuid)) ||
+                                (entry.getIp() != null && entry.getIp().equals(ip)) ||
                                 entry.getName().equalsIgnoreCase(username)
                 )
                 .findFirst()

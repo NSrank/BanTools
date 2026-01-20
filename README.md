@@ -80,6 +80,8 @@ fakeban {
   duration_minutes = 30
   confirmation_message = "此操作将会暂时踢出玩家直到三十分钟后才可以重新加入，建议检查挂机玩家周遭情况，确认执行请输入指令"
   confirmation_timeout_minutes = 3
+  cleanup_interval_minutes = 1
+  log_loading_info = true
 }
 
 whitelist {
@@ -133,6 +135,8 @@ fakebans {
 - `duration_minutes`：临时封禁持续时间（分钟）
 - `confirmation_message`：二次确认提示消息
 - `confirmation_timeout_minutes`：确认超时时间（分钟）
+- `cleanup_interval_minutes`：清理过期记录的检查间隔（分钟）
+- `log_loading_info`：是否在控制台输出临时封禁记录加载信息
 
 **whitelist 节**：
 - `enabled`：白名单功能开关
@@ -153,7 +157,28 @@ fakebans {
 
 ## 🔧 版本更新日志
 
-### v1.4.0 (最新版本)  
+### v1.4.2 (最新版本)
+**新增功能：**
+- 🆕 **可配置日志输出**：新增 `fakeban.log_loading_info` 配置项，控制是否输出"加载了 X 个活跃的临时封禁记录"信息
+- 🆕 **可配置清理间隔**：新增 `fakeban.cleanup_interval_minutes` 配置项，自定义过期记录检查间隔（默认1分钟）
+
+**配置优化：**
+- 管理员可以通过设置 `log_loading_info = false` 来关闭临时封禁加载日志
+- 可以调整清理间隔来平衡性能和及时性（建议1-5分钟）
+
+### v1.4.1
+**重要修复：**
+- 🔧 **修复空指针异常**：解决了当封禁记录中UUID为null时导致的NullPointerException
+- 🔧 **改进离线玩家处理**：完善了对离线封禁玩家的UUID和IP检查逻辑
+- 🔧 **增强稳定性**：修复了临时封禁系统中的null值处理问题
+- 🔧 **登录拦截修复**：确保离线封禁的玩家能够被正确拦截
+
+**技术改进：**
+- 在所有UUID和IP比较前添加null检查
+- 优化了封禁匹配算法的安全性
+- 改进了错误处理机制
+
+### v1.4.0
 **重大新功能：**
 - 🆕 **临时封禁系统（FakeBan）**：全新的临时封禁功能，支持自动过期和二次确认机制  
 - 🆕 **白名单保护系统**：保护指定玩家免受封禁、踢出和临时封禁，防止管理员被恶意封禁  
@@ -315,6 +340,12 @@ A: v1.3.2已将解封命令整合到 `/bt unban` 中，不再使用独立的 `/u
 
 **Q: 提示"该玩家未被封禁或已被解封"**
 A: 这表示玩家当前没有有效的封禁记录，可能已经被解封或从未被封禁。
+
+**Q: 出现 "Cannot invoke String.equals(Object) because the return value of getUuid() is null" 错误**
+A: 这是v1.4.0及之前版本的已知问题，当离线封禁玩家的UUID为null时会导致空指针异常。v1.4.1已修复此问题，请升级到最新版本。
+
+**Q: 离线封禁的玩家能够正常登录服务器**
+A: 检查是否出现了上述的空指针异常。如果有，请升级到v1.4.1或更高版本。该版本修复了离线玩家UUID为null时的拦截失败问题。
 
 ### 配置文件格式
 

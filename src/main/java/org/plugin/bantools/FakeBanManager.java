@@ -209,8 +209,8 @@ public class FakeBanManager {
                         return true;
                     }
                     // 检查UUID和IP（如果不为空）
-                    return (!entry.getUuid().isEmpty() && entry.getUuid().equals(uuid)) ||
-                           (!entry.getIp().isEmpty() && entry.getIp().equals(ip));
+                    return (entry.getUuid() != null && !entry.getUuid().isEmpty() && entry.getUuid().equals(uuid)) ||
+                           (entry.getIp() != null && !entry.getIp().isEmpty() && entry.getIp().equals(ip));
                 });
     }
 
@@ -224,8 +224,8 @@ public class FakeBanManager {
                     if (entry.getName().equalsIgnoreCase(username)) {
                         return true;
                     }
-                    return (!entry.getUuid().isEmpty() && entry.getUuid().equals(uuid)) ||
-                           (!entry.getIp().isEmpty() && entry.getIp().equals(ip));
+                    return (entry.getUuid() != null && !entry.getUuid().isEmpty() && entry.getUuid().equals(uuid)) ||
+                           (entry.getIp() != null && !entry.getIp().isEmpty() && entry.getIp().equals(ip));
                 })
                 .findFirst()
                 .orElse(null);
@@ -266,27 +266,33 @@ public class FakeBanManager {
             }
         }
         
-        logger.info("加载了 " + activeFakeBans.size() + " 个活跃的临时封禁记录");
+        // 根据配置决定是否输出日志
+        if (configManager.isFakeBanLogLoadingInfoEnabled()) {
+            logger.info("加载了 " + activeFakeBans.size() + " 个活跃的临时封禁记录");
+        }
     }
 
     /**
      * 启动清理任务
      */
     private void startCleanupTask() {
-        // 每分钟清理一次过期的临时封禁
+        int intervalMinutes = configManager.getFakeBanCleanupIntervalMinutes();
+        // 根据配置的时间间隔清理过期的临时封禁
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 // 清理过期的待确认操作
                 pendingFakeBans.entrySet().removeIf(entry -> entry.getValue().isExpired());
-                
+
                 // 清理过期的临时封禁
                 configManager.cleanupExpiredFakeBans();
                 loadActiveFakeBans();
-                
+
             } catch (Exception e) {
                 logger.error("清理过期临时封禁时发生错误", e);
             }
-        }, 1, 1, TimeUnit.MINUTES);
+        }, intervalMinutes, intervalMinutes, TimeUnit.MINUTES);
+
+        logger.info("临时封禁清理任务已启动，检查间隔: " + intervalMinutes + " 分钟");
     }
 
     /**
