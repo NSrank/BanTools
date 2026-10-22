@@ -1,0 +1,24 @@
+# 编译产物
+target/
+build/
+out/
+*.class
+
+# Gradle
+.gradle/
+
+# IDE 项目文件
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# 崩溃日志与临时文件
+hs_err_pid*.log
+replay_pid*.log
+
+# 嵌套仓库（如有）
+.git/
